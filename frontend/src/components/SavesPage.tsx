@@ -24,21 +24,21 @@ export const SavesPage: React.FC<SavesPageProps> = ({
   onSelectPlan,
   onDeletePlan,
 }) => {
-  // Travel Notes Scratchpad State with localStorage persistence
+  // Travel Notes Scratchpad State with localStorage persistence (v2 clean storage)
+  const NOTES_STORAGE_KEY = 'tripos_saved_notes_v2';
+  try {
+    localStorage.removeItem('tripos_saved_notes');
+  } catch {}
+
   const [notes, setNotes] = useState<NoteItem[]>(() => {
     try {
-      const saved = localStorage.getItem('tripos_saved_notes');
+      const saved = localStorage.getItem(NOTES_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch {}
-    return [
-      { id: '1', text: 'DOWNLOAD OFFLINE GOOGLE MAPS FOR HIGHWAY PASSES', isCompleted: true, category: 'GENERAL' },
-      { id: '2', text: 'PACK PHYSICAL AADHAAR CARD & DL FOR VEHICLE RENTAL', isCompleted: true, category: 'DOCS' },
-      { id: '3', text: 'THERMAL BASE LAYERS & WATERPROOF TREK BOOTS', isCompleted: false, category: 'PACKING' },
-      { id: '4', text: 'EMERGENCY HOSPITALS & POLICE HOTLINE NUMBERS', isCompleted: false, category: 'CONTACTS' }
-    ];
+    return [];
   });
   const [newNoteText, setNewNoteText] = useState('');
   const [newNoteCategory, setNewNoteCategory] = useState<NoteItem['category']>('GENERAL');
@@ -63,7 +63,7 @@ export const SavesPage: React.FC<SavesPageProps> = ({
     setNotes((prev) => {
       const updated = prev.map((n) => (n.id === id ? { ...n, isCompleted: !n.isCompleted } : n));
       try {
-        localStorage.setItem('tripos_saved_notes', JSON.stringify(updated));
+        localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(updated));
       } catch {}
       return updated;
     });
@@ -89,7 +89,7 @@ export const SavesPage: React.FC<SavesPageProps> = ({
     setNotes((prev) => {
       const updated = [newNote, ...prev];
       try {
-        localStorage.setItem('tripos_saved_notes', JSON.stringify(updated));
+        localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(updated));
       } catch {}
       return updated;
     });
@@ -104,7 +104,7 @@ export const SavesPage: React.FC<SavesPageProps> = ({
     setNotes((prev) => {
       const updated = prev.filter((n) => n.id !== id);
       try {
-        localStorage.setItem('tripos_saved_notes', JSON.stringify(updated));
+        localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(updated));
       } catch {}
       return updated;
     });
@@ -303,42 +303,51 @@ export const SavesPage: React.FC<SavesPageProps> = ({
 
         {/* Notes Items List */}
         <div className="space-y-2">
-          {notes.map((note) => (
-            <div
-              key={note.id}
-              className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
-                note.isCompleted
-                  ? 'bg-slate-100/60 border-slate-200/60 text-slate-400'
-                  : 'bg-white/80 border-slate-200/80 text-slate-800 shadow-2xs'
-              }`}
-            >
-              <div
-                onClick={() => handleToggleNote(note.id)}
-                className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
-              >
-                {note.isCompleted ? (
-                  <CheckSquare className="w-4 h-4 text-emerald-600 shrink-0" />
-                ) : (
-                  <Square className="w-4 h-4 text-slate-400 shrink-0" />
-                )}
-                <span className={`text-xs font-bold uppercase truncate ${note.isCompleted ? 'line-through' : ''}`}>
-                  {note.text}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-slate-100 text-slate-600">
-                  {note.category}
-                </span>
-                <button
-                  onClick={() => handleDeleteNote(note.id)}
-                  className="p-1 text-slate-400 hover:text-red-600 cursor-pointer"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
+          {notes.length === 0 ? (
+            <div className="p-6 text-center glass-card border border-dashed border-slate-300 rounded-2xl">
+              <p className="text-sm font-black uppercase text-slate-600">NO CHECKLIST NOTES YET</p>
+              <p className="text-xs font-bold text-slate-400 uppercase mt-1">
+                TYPE A TO-DO ABOVE AND CLICK "+ ADD NOTE" TO BUILD YOUR PERSONAL PACKING LIST & EMERGENCY LOG.
+              </p>
             </div>
-          ))}
+          ) : (
+            notes.map((note) => (
+              <div
+                key={note.id}
+                className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                  note.isCompleted
+                    ? 'bg-slate-100/60 border-slate-200/60 text-slate-400'
+                    : 'bg-white/80 border-slate-200/80 text-slate-800 shadow-2xs'
+                }`}
+              >
+                <div
+                  onClick={() => handleToggleNote(note.id)}
+                  className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
+                >
+                  {note.isCompleted ? (
+                    <CheckSquare className="w-4 h-4 text-emerald-600 shrink-0" />
+                  ) : (
+                    <Square className="w-4 h-4 text-slate-400 shrink-0" />
+                  )}
+                  <span className={`text-xs font-bold uppercase truncate ${note.isCompleted ? 'line-through' : ''}`}>
+                    {note.text}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-slate-100 text-slate-600">
+                    {note.category}
+                  </span>
+                  <button
+                    onClick={() => handleDeleteNote(note.id)}
+                    className="p-1 text-slate-400 hover:text-red-600 cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
