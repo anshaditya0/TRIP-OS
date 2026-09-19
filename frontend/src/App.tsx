@@ -102,7 +102,7 @@ export default function App() {
 
   // Plans state
   const [savedPlans, setSavedPlans] = useState<ItineraryPlan[]>(INITIAL_SAVED_PLANS);
-  const [currentPlan, setCurrentPlan] = useState<ItineraryPlan | null>(INITIAL_SAVED_PLANS[0]);
+  const [currentPlan, setCurrentPlan] = useState<ItineraryPlan | null>(null);
   const [plannerDestination, setPlannerDestination] = useState<string>('Goa Coastline');
   const [plannerKey, setPlannerKey] = useState<number>(0);
 
@@ -212,17 +212,29 @@ export default function App() {
   };
 
   const handleAddDocument = (doc: DigitalDocument) => {
-    setUser((prev) => ({
-      ...prev,
-      documents: [doc, ...prev.documents]
-    }));
+    setUser((prev) => {
+      const updated = {
+        ...prev,
+        documents: [doc, ...prev.documents]
+      };
+      try {
+        localStorage.setItem('tripos_user_session', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
   };
 
   const handleAddExpense = (exp: PersonalExpense) => {
-    setUser((prev) => ({
-      ...prev,
-      expenses: [exp, ...prev.expenses]
-    }));
+    setUser((prev) => {
+      const updated = {
+        ...prev,
+        expenses: [exp, ...prev.expenses]
+      };
+      try {
+        localStorage.setItem('tripos_user_session', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
   };
 
   // If not logged in, render the Parallax Map Login Page
@@ -314,7 +326,7 @@ export default function App() {
                 }`}
               >
                 <div className="w-5 h-5 rounded-full bg-slate-900 text-amber-400 font-mono text-[9px] font-black flex items-center justify-center shrink-0">
-                  {user.name.split(' ').map(n => n[0]).join('').slice(0, 2) || 'SR'}
+                  {user.name ? user.name.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2) : 'EX'}
                 </div>
                 <span className="hidden md:inline truncate">{user.name}</span>
               </button>

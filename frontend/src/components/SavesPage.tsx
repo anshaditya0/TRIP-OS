@@ -45,23 +45,17 @@ export const SavesPage: React.FC<SavesPageProps> = ({
   const [noteFeedback, setNoteFeedback] = useState<string | null>(null);
   const [inputError, setInputError] = useState(false);
 
-  // Google Drive Trip Photos Dropzone State
-  const [photos, setPhotos] = useState<TripPhoto[]>([
-    {
-      id: 'p-1',
-      url: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&w=600&q=80',
-      caption: 'GOA SUNSET KAYAKING WITH CREW',
-      uploadedAt: 'YESTERDAY',
-      sizeMb: 3.4
-    },
-    {
-      id: 'p-2',
-      url: 'https://images.unsplash.com/photo-1599661046289-e31897846e41?auto=format&fit=crop&w=600&q=80',
-      caption: 'AMBER FORT ELEPHANT RIDGE',
-      uploadedAt: '3 DAYS AGO',
-      sizeMb: 4.8
-    }
-  ]);
+  // Google Drive Trip Photos Dropzone State with localStorage persistence
+  const [photos, setPhotos] = useState<TripPhoto[]>(() => {
+    try {
+      const saved = localStorage.getItem('tripos_saved_photos');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {}
+    return [];
+  });
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
 
@@ -130,7 +124,13 @@ export const SavesPage: React.FC<SavesPageProps> = ({
         uploadedAt: 'JUST NOW',
         sizeMb: Math.round((file.size / (1024 * 1024)) * 10) / 10
       };
-      setPhotos((prev) => [newPhoto, ...prev]);
+      setPhotos((prev) => {
+        const updated = [newPhoto, ...prev];
+        try {
+          localStorage.setItem('tripos_saved_photos', JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
     }
   };
 
@@ -393,22 +393,32 @@ export const SavesPage: React.FC<SavesPageProps> = ({
             SHARED ALBUM PHOTOS ({photos.length})
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {photos.map((photo) => (
-              <div
-                key={photo.id}
-                className="relative rounded-2xl overflow-hidden aspect-square border border-white/80 shadow-2xs group"
-              >
-                <img
-                  src={photo.url}
-                  alt={photo.caption}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2.5 text-white">
-                  <p className="text-[10px] font-black uppercase truncate">{photo.caption}</p>
-                  <p className="text-[9px] font-bold text-white/70">{photo.sizeMb} MB • {photo.uploadedAt}</p>
-                </div>
+            {photos.length === 0 ? (
+              <div className="p-8 text-center glass-card border border-dashed border-slate-300 rounded-2xl col-span-full">
+                <ImageIcon className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                <p className="text-sm font-black uppercase text-slate-600">NO SHARED PHOTOS YET</p>
+                <p className="text-xs font-bold text-slate-400 uppercase mt-1">
+                  DRAG & DROP IMAGES ABOVE OR SCAN THE GOOGLE DRIVE QR TO UPLOAD MEMORIES DIRECTLY FROM YOUR PHONE.
+                </p>
               </div>
-            ))}
+            ) : (
+              photos.map((photo) => (
+                <div
+                  key={photo.id}
+                  className="relative rounded-2xl overflow-hidden aspect-square border border-white/80 shadow-2xs group"
+                >
+                  <img
+                    src={photo.url}
+                    alt={photo.caption}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2.5 text-white">
+                    <p className="text-[10px] font-black uppercase truncate">{photo.caption}</p>
+                    <p className="text-[9px] font-bold text-white/70">{photo.sizeMb} MB • {photo.uploadedAt}</p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

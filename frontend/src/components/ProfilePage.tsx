@@ -212,7 +212,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                 />
               ) : (
                 <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-slate-900 via-slate-800 to-orange-950 text-amber-400 font-black text-3xl flex flex-col items-center justify-center ring-2 ring-white shadow-md">
-                  <span>{user.name.split(' ').map(n => n[0]).join('').slice(0, 2) || 'SR'}</span>
+                  <span>{user.name ? user.name.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2) : 'EX'}</span>
                   <span className="text-[9px] font-mono tracking-widest text-slate-400 uppercase mt-0.5">TRIP OS</span>
                 </div>
               )}
@@ -391,40 +391,50 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
             {/* Document Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {user.documents.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="p-4 rounded-2xl bg-white/90 border border-slate-200 shadow-sm flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-slate-100 text-slate-700">
-                        {doc.type}
-                      </span>
-                      {doc.isVerified && (
-                        <span className="flex items-center gap-1 text-[10px] font-black uppercase text-emerald-700">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>VERIFIED</span>
-                        </span>
-                      )}
-                    </div>
-                    <h4 className="text-sm font-black uppercase text-slate-900 mb-1">
-                      {doc.name}
-                    </h4>
-                    <p className="text-xs font-mono font-bold text-slate-600 mb-2">
-                      {doc.docNumber}
-                    </p>
-                    <p className="text-[10px] font-extrabold text-slate-400 uppercase">
-                      ISSUED BY: {doc.issuedBy}
-                    </p>
-                  </div>
-
-                  <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase">
-                    <span>ADDED: {doc.uploadedDate}</span>
-                    {doc.expiryDate && <span>EXP: {doc.expiryDate}</span>}
-                  </div>
+              {user.documents.length === 0 ? (
+                <div className="col-span-full p-8 text-center glass-card border border-dashed border-slate-300 rounded-2xl">
+                  <ShieldCheck className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                  <p className="text-sm font-black uppercase text-slate-600">NO DOCUMENTS STORED YET</p>
+                  <p className="text-xs font-bold text-slate-400 uppercase mt-1">
+                    TAP "+ SAVE NEW DOCUMENT" TO SECURELY STORE YOUR PASSPORT, AADHAAR, OR FLIGHT PASS.
+                  </p>
                 </div>
-              ))}
+              ) : (
+                user.documents.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="p-4 rounded-2xl bg-white/90 border border-slate-200 shadow-sm flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-slate-100 text-slate-700">
+                          {doc.type}
+                        </span>
+                        {doc.isVerified && (
+                          <span className="flex items-center gap-1 text-[10px] font-black uppercase text-emerald-700">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>VERIFIED</span>
+                          </span>
+                        )}
+                      </div>
+                      <h4 className="text-sm font-black uppercase text-slate-900 mb-1">
+                        {doc.name}
+                      </h4>
+                      <p className="text-xs font-mono font-bold text-slate-600 mb-2">
+                        {doc.docNumber}
+                      </p>
+                      <p className="text-[10px] font-extrabold text-slate-400 uppercase">
+                        ISSUED BY: {doc.issuedBy}
+                      </p>
+                    </div>
+
+                    <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase">
+                      <span>ADDED: {doc.uploadedDate}</span>
+                      {doc.expiryDate && <span>EXP: {doc.expiryDate}</span>}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -457,32 +467,41 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
             {/* Expenses List */}
             <div className="space-y-3">
-              {user.expenses.map((exp) => (
-                <div
-                  key={exp.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-2xl bg-white/85 border border-slate-200/80 shadow-2xs gap-2"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 flex items-center justify-center font-black text-xs shrink-0">
-                      {exp.category === 'TRANSPORT' ? '✈️' : exp.category === 'HOTEL' ? '🏨' : exp.category === 'FOOD' ? '🍲' : exp.category === 'SHOPPING' ? '🛍️' : '🎟️'}
-                    </div>
-                    <div>
-                      <p className="text-xs font-black uppercase text-slate-900">{exp.tripTitle}</p>
-                      <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase mt-0.5">
-                        <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-extrabold">{exp.category}</span>
-                        <span>{exp.date}</span>
-                        <span>• {exp.paymentMethod}</span>
+              {user.expenses.length === 0 ? (
+                <div className="p-8 text-center glass-card border border-dashed border-slate-300 rounded-2xl">
+                  <p className="text-sm font-black uppercase text-slate-600">NO EXPENSES RECORDED YET</p>
+                  <p className="text-xs font-bold text-slate-400 uppercase mt-1">
+                    TAP "+ LOG EXPENSE" TO RECORD YOUR HOTEL, TRANSPORT, FOOD, OR TRIP ACTIVITY SPENDS.
+                  </p>
+                </div>
+              ) : (
+                user.expenses.map((exp) => (
+                  <div
+                    key={exp.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-2xl bg-white/85 border border-slate-200/80 shadow-2xs gap-2"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 flex items-center justify-center font-black text-xs shrink-0">
+                        {exp.category === 'TRANSPORT' ? '✈️' : exp.category === 'HOTEL' ? '🏨' : exp.category === 'FOOD' ? '🍲' : exp.category === 'SHOPPING' ? '🛍️' : '🎟️'}
+                      </div>
+                      <div>
+                        <p className="text-xs font-black uppercase text-slate-900">{exp.tripTitle}</p>
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase mt-0.5">
+                          <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-extrabold">{exp.category}</span>
+                          <span>{exp.date}</span>
+                          <span>• {exp.paymentMethod}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="text-right self-end sm:self-auto">
-                    <span className="text-sm font-black text-slate-900">
-                      ₹{exp.amount.toLocaleString()}
-                    </span>
+                    <div className="text-right self-end sm:self-auto">
+                      <span className="text-sm font-black text-slate-900">
+                        ₹{exp.amount.toLocaleString()}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>
