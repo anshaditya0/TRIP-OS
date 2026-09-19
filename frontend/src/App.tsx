@@ -56,13 +56,24 @@ export default function App() {
   // Opening splash sequence state
   const [isSplashDone, setIsSplashDone] = useState(false);
 
-  // Authentication state: check saved session in localStorage
+  // Purge legacy demo sessions and mock data from previous runs
+  const SESSION_KEY = 'tripos_user_session_v2';
+  try {
+    localStorage.removeItem('tripos_user_session');
+  } catch {}
+
+  // Authentication state: check clean v2 session in localStorage
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     try {
-      return !!localStorage.getItem('tripos_user_session');
-    } catch {
-      return false;
-    }
+      const saved = localStorage.getItem(SESSION_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.name && parsed.name !== 'SPARSH RAJ') {
+          return true;
+        }
+      }
+    } catch {}
+    return false;
   });
 
   // Core navigation tab state ('home' | 'plans' | 'saves' | 'profile')
@@ -84,12 +95,21 @@ export default function App() {
     return () => clearInterval(timer);
   }, []);
 
-  // User Profile state: hydrate from saved session or default explorer
+  // User Profile state: hydrate from clean session or fresh explorer
   const [user, setUser] = useState<UserProfile>(() => {
     try {
-      const saved = localStorage.getItem('tripos_user_session');
+      const saved = localStorage.getItem(SESSION_KEY);
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (parsed.name && parsed.name !== 'SPARSH RAJ') {
+          return {
+            ...DEFAULT_USER_PROFILE,
+            ...parsed,
+            // Strip out any legacy mock documents (doc-1) or expenses (exp-1)
+            documents: Array.isArray(parsed.documents) ? parsed.documents.filter((d: any) => !d.id?.startsWith('doc-')) : [],
+            expenses: Array.isArray(parsed.expenses) ? parsed.expenses.filter((e: any) => !e.id?.startsWith('exp-')) : []
+          };
+        }
       }
     } catch (e) {
       console.warn('Error reading saved session', e);
@@ -137,11 +157,13 @@ export default function App() {
       ...user,
       name: cleanName,
       email: cleanEmail,
+      documents: [],
+      expenses: []
     };
     setUser(updatedUser);
     setIsAuthenticated(true);
     try {
-      localStorage.setItem('tripos_user_session', JSON.stringify(updatedUser));
+      localStorage.setItem(SESSION_KEY, JSON.stringify(updatedUser));
     } catch (e) {
       console.warn('Error saving session', e);
     }
@@ -149,6 +171,7 @@ export default function App() {
 
   const handleLogout = () => {
     try {
+      localStorage.removeItem(SESSION_KEY);
       localStorage.removeItem('tripos_user_session');
     } catch (e) {
       console.warn('Error clearing session', e);
@@ -218,7 +241,7 @@ export default function App() {
         documents: [doc, ...prev.documents]
       };
       try {
-        localStorage.setItem('tripos_user_session', JSON.stringify(updated));
+        localStorage.setItem(SESSION_KEY, JSON.stringify(updated));
       } catch {}
       return updated;
     });
@@ -231,7 +254,7 @@ export default function App() {
         expenses: [exp, ...prev.expenses]
       };
       try {
-        localStorage.setItem('tripos_user_session', JSON.stringify(updated));
+        localStorage.setItem(SESSION_KEY, JSON.stringify(updated));
       } catch {}
       return updated;
     });
