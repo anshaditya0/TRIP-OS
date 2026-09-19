@@ -56,8 +56,14 @@ export default function App() {
   // Opening splash sequence state
   const [isSplashDone, setIsSplashDone] = useState(false);
 
-  // Authentication state
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  // Authentication state: check saved session in localStorage
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    try {
+      return !!localStorage.getItem('tripos_user_session');
+    } catch {
+      return false;
+    }
+  });
 
   // Core navigation tab state ('home' | 'plans' | 'saves' | 'profile')
   const [currentTab, setCurrentTab] = useState<NavTab>('home');
@@ -78,8 +84,18 @@ export default function App() {
     return () => clearInterval(timer);
   }, []);
 
-  // User Profile state
-  const [user, setUser] = useState<UserProfile>(DEFAULT_USER_PROFILE);
+  // User Profile state: hydrate from saved session or default explorer
+  const [user, setUser] = useState<UserProfile>(() => {
+    try {
+      const saved = localStorage.getItem('tripos_user_session');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.warn('Error reading saved session', e);
+    }
+    return DEFAULT_USER_PROFILE;
+  });
 
   // Destinations & Reviews state
   const [destinations, setDestinations] = useState<DestinationCard[]>(POPULAR_DESTINATIONS);
@@ -115,11 +131,28 @@ export default function App() {
   const activeWeatherConfig = WEATHER_CONFIGS[weatherTheme];
 
   const handleLogin = (email: string, name: string) => {
-    setUser((prev) => ({ ...prev, email, name: name.toUpperCase() }));
+    const cleanName = (name.trim() || 'EXPLORER').toUpperCase();
+    const cleanEmail = email.trim() || `${cleanName.toLowerCase().replace(/\s+/g, '')}@tripos.world`;
+    const updatedUser: UserProfile = {
+      ...user,
+      name: cleanName,
+      email: cleanEmail,
+    };
+    setUser(updatedUser);
     setIsAuthenticated(true);
+    try {
+      localStorage.setItem('tripos_user_session', JSON.stringify(updatedUser));
+    } catch (e) {
+      console.warn('Error saving session', e);
+    }
   };
 
   const handleLogout = () => {
+    try {
+      localStorage.removeItem('tripos_user_session');
+    } catch (e) {
+      console.warn('Error clearing session', e);
+    }
     setIsAuthenticated(false);
   };
 

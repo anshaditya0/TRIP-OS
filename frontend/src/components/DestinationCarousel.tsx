@@ -45,7 +45,7 @@ export const DestinationCarousel: React.FC<DestinationCarouselProps> = ({
   const [direction, setDirection] = useState<1 | -1>(1); // 1 = forward (left to right visual), -1 = reverse
 
   // Review submission state
-  const [reviewAuthor, setReviewAuthor] = useState('SPARSH RAJ');
+  const [reviewAuthor, setReviewAuthor] = useState('LOCAL EXPLORER');
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
 

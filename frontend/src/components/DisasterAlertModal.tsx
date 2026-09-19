@@ -44,7 +44,7 @@ export const DisasterAlertModal: React.FC<DisasterAlertModalProps> = ({
   isOpen,
   onClose,
   onSubmitAlert,
-  defaultReporterName = 'SPARSH RAJ'
+  defaultReporterName = 'Local Explorer'
 }) => {
   const [reporterName, setReporterName] = useState(defaultReporterName);
   const [location, setLocation] = useState('');

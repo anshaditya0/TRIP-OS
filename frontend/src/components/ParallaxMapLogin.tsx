@@ -8,11 +8,11 @@ interface ParallaxMapLoginProps {
   defaultEmail?: string;
 }
 
-export const ParallaxMapLogin: React.FC<ParallaxMapLoginProps> = ({ onLogin, defaultEmail = 'sparshrajvrn@gmail.com' }) => {
+export const ParallaxMapLogin: React.FC<ParallaxMapLoginProps> = ({ onLogin, defaultEmail = '' }) => {
   const [authMode, setAuthMode] = useState<'LOGIN' | 'SIGNUP'>('LOGIN');
   const [email, setEmail] = useState(defaultEmail);
-  const [name, setName] = useState('SPARSH RAJ');
-  const [password, setPassword] = useState('••••••••');
+  const [name, setName] = useState('');
+  const [password, setPassword] = useState('');
 
   // Anime.js continuous live floating animation for background elements
   useEffect(() => {
@@ -67,9 +67,9 @@ export const ParallaxMapLogin: React.FC<ParallaxMapLoginProps> = ({ onLogin, def
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (email.trim()) {
-      onLogin(email.trim(), name.trim() || 'TRAVELER');
-    }
+    const cleanName = name.trim() || 'EXPLORER';
+    const cleanEmail = email.trim() || `${cleanName.toLowerCase().replace(/\s+/g, '')}@tripos.world`;
+    onLogin(cleanEmail, cleanName);
   };
 
   return (
@@ -224,7 +224,7 @@ export const ParallaxMapLogin: React.FC<ParallaxMapLoginProps> = ({ onLogin, def
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. SPARSH RAJ"
+              placeholder="e.g. ALEX MORGAN / RAHUL"
               required
               className="w-full px-4 py-3 glass-input text-slate-900 font-bold uppercase tracking-wide text-sm placeholder:text-slate-400"
             />
@@ -238,7 +238,7 @@ export const ParallaxMapLogin: React.FC<ParallaxMapLoginProps> = ({ onLogin, def
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="e.g. sparshrajvrn@gmail.com"
+              placeholder="e.g. explorer@tripos.world"
               required
               className="w-full px-4 py-3 glass-input text-slate-900 font-bold uppercase tracking-wide text-sm placeholder:text-slate-400"
             />
@@ -263,7 +263,7 @@ export const ParallaxMapLogin: React.FC<ParallaxMapLoginProps> = ({ onLogin, def
             </motion.div>
           )}
 
-          <div className="pt-2">
+          <div className="pt-2 space-y-2.5">
             <motion.button
               whileTap={{ scale: 0.98 }}
               whileHover={{ scale: 1.01 }}
@@ -274,6 +274,14 @@ export const ParallaxMapLogin: React.FC<ParallaxMapLoginProps> = ({ onLogin, def
               <span>{authMode === 'LOGIN' ? 'ACCESS TRIP OS DASHBOARD' : 'REGISTER & LAUNCH TRIP OS'}</span>
               <ArrowRight className="w-4 h-4" />
             </motion.button>
+
+            <button
+              type="button"
+              onClick={() => onLogin('guest.explorer@tripos.world', 'GUEST EXPLORER')}
+              className="w-full py-2.5 rounded-xl border border-slate-200/80 hover:bg-slate-100/60 text-slate-500 hover:text-slate-800 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+            >
+              OR EXPLORE AS GUEST
+            </button>
           </div>
         </form>
 

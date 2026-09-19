@@ -265,14 +265,14 @@ export const INITIAL_DISASTER_ALERTS: import('../types').DisasterAlert[] = [
 ];
 
 export const DEFAULT_USER_PROFILE: UserProfile = {
-  name: 'SPARSH RAJ',
-  email: 'sparshrajvrn@gmail.com',
+  name: 'EXPLORER',
+  email: 'explorer@tripos.world',
   avatar: '',
-  badge: 'ELITE EXPLORER',
-  homeCity: 'Varanasi / Delhi',
-  tripsCount: 14,
-  statesExplored: 9,
-  totalMiles: 12450,
+  badge: 'ACTIVE EXPLORER',
+  homeCity: 'India',
+  tripsCount: 0,
+  statesExplored: 0,
+  totalMiles: 0,
   documents: [
     {
       id: 'doc-1',

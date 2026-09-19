@@ -32,7 +32,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/", apiLimiter);
 
 // Health Check
-app.get("/api/health", (req, res) => {
+app.get(["/", "/api/health"], (req, res) => {
     res.json({
         status: "TRIP//OS backend is alive 🚀",
         timestamp: new Date().toISOString(),
