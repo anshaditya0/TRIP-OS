@@ -1,0 +1,6 @@
+{
+  "name": "TRIP OS",
+  "description": "TRIP OS — Intelligent travel operating system with step-by-step itinerary planning, interactive corridor maps, journey collectibles, and disaster alerts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
