@@ -23,7 +23,8 @@ async function startServer() {
       return next();
     }
     try {
-      const backendUrl = `http://localhost:5000/api${req.url}`;
+      const backendBase = (process.env.BACKEND_URL || 'http://localhost:5000').replace(/\/$/, '');
+      const backendUrl = `${backendBase}/api${req.url}`;
       const headers: Record<string, string> = {};
       for (const [key, value] of Object.entries(req.headers)) {
         if (typeof value === 'string' && key.toLowerCase() !== 'host') {
