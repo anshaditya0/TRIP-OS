@@ -230,7 +230,7 @@ export default function App() {
     return (
       <ParallaxMapLogin
         onLogin={handleLogin}
-        defaultEmail={user.email}
+        defaultEmail=""
       />
     );
   }

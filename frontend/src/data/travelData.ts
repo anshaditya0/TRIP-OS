@@ -265,8 +265,8 @@ export const INITIAL_DISASTER_ALERTS: import('../types').DisasterAlert[] = [
 ];
 
 export const DEFAULT_USER_PROFILE: UserProfile = {
-  name: 'EXPLORER',
-  email: 'explorer@tripos.world',
+  name: '',
+  email: '',
   avatar: '',
   badge: 'ACTIVE EXPLORER',
   homeCity: 'India',

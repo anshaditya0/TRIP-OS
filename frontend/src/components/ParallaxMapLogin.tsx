@@ -10,7 +10,7 @@ interface ParallaxMapLoginProps {
 
 export const ParallaxMapLogin: React.FC<ParallaxMapLoginProps> = ({ onLogin, defaultEmail = '' }) => {
   const [authMode, setAuthMode] = useState<'LOGIN' | 'SIGNUP'>('LOGIN');
-  const [email, setEmail] = useState(defaultEmail);
+  const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
 
@@ -238,7 +238,7 @@ export const ParallaxMapLogin: React.FC<ParallaxMapLoginProps> = ({ onLogin, def
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="e.g. explorer@tripos.world"
+              placeholder="e.g. alex.morgan@gmail.com / traveler@tripos.world"
               required
               className="w-full px-4 py-3 glass-input text-slate-900 font-bold uppercase tracking-wide text-sm placeholder:text-slate-400"
             />
