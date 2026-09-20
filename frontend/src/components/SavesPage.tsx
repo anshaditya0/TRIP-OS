@@ -56,6 +56,8 @@ export const SavesPage: React.FC<SavesPageProps> = ({
     } catch {}
     return [];
   });
+  const [photoFeedback, setPhotoFeedback] = useState<string | null>(null);
+  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
 
@@ -112,25 +114,55 @@ export const SavesPage: React.FC<SavesPageProps> = ({
     setTimeout(() => setNoteFeedback(null), 2000);
   };
 
-  // Photo upload simulation
+  // Photo upload with Base64 persistence to prevent broken blob URLs on reload
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
       const file = files[0];
-      const newPhoto: TripPhoto = {
-        id: `photo-${Date.now()}`,
-        url: URL.createObjectURL(file),
-        caption: file.name.toUpperCase().replace(/\.[^/.]+$/, ''),
-        uploadedAt: 'JUST NOW',
-        sizeMb: Math.round((file.size / (1024 * 1024)) * 10) / 10
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const dataUrl = event.target?.result as string;
+        const newPhoto: TripPhoto = {
+          id: `photo-${Date.now()}`,
+          url: dataUrl || URL.createObjectURL(file),
+          caption: file.name.toUpperCase().replace(/\.[^/.]+$/, ''),
+          uploadedAt: 'JUST NOW',
+          sizeMb: Math.round((file.size / (1024 * 1024)) * 10) / 10
+        };
+        setPhotos((prev) => {
+          const updated = [newPhoto, ...prev];
+          try {
+            localStorage.setItem('tripos_saved_photos', JSON.stringify(updated));
+          } catch {}
+          return updated;
+        });
+        setPhotoFeedback('📸 PHOTO ADDED & SYNCED');
+        setTimeout(() => setPhotoFeedback(null), 2500);
       };
-      setPhotos((prev) => {
-        const updated = [newPhoto, ...prev];
-        try {
-          localStorage.setItem('tripos_saved_photos', JSON.stringify(updated));
-        } catch {}
-        return updated;
-      });
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDeletePhoto = (photoId: string) => {
+    setPhotos((prev) => {
+      const updated = prev.filter((p) => p.id !== photoId);
+      try {
+        localStorage.setItem('tripos_saved_photos', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+    setPhotoFeedback('🗑️ PHOTO REMOVED FROM ALBUM');
+    setTimeout(() => setPhotoFeedback(null), 2500);
+  };
+
+  const handleClearAllPhotos = () => {
+    if (window.confirm('ARE YOU SURE YOU WANT TO CLEAR ALL SHARED PHOTOS?')) {
+      setPhotos([]);
+      try {
+        localStorage.removeItem('tripos_saved_photos');
+      } catch {}
+      setPhotoFeedback('🗑️ ALL PHOTOS CLEARED');
+      setTimeout(() => setPhotoFeedback(null), 2500);
     }
   };
 
@@ -412,9 +444,29 @@ export const SavesPage: React.FC<SavesPageProps> = ({
 
         {/* Gallery Grid of Uploaded Trip Photos */}
         <div>
-          <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 mb-3">
-            SHARED ALBUM PHOTOS ({photos.length})
-          </h3>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">
+                SHARED ALBUM PHOTOS ({photos.length})
+              </h3>
+              {photoFeedback && (
+                <span className="text-[10px] font-mono font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                  {photoFeedback}
+                </span>
+              )}
+            </div>
+            {photos.length > 0 && (
+              <button
+                type="button"
+                onClick={handleClearAllPhotos}
+                className="text-[10px] font-mono font-bold uppercase text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer transition-colors px-2 py-1 rounded-lg hover:bg-red-50"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>CLEAR ALL</span>
+              </button>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {photos.length === 0 ? (
               <div className="p-8 text-center glass-card border border-dashed border-slate-300 rounded-2xl col-span-full">
@@ -428,14 +480,40 @@ export const SavesPage: React.FC<SavesPageProps> = ({
               photos.map((photo) => (
                 <div
                   key={photo.id}
-                  className="relative rounded-2xl overflow-hidden aspect-square border border-white/80 shadow-2xs group"
+                  className="relative rounded-2xl overflow-hidden aspect-square border border-white/80 shadow-2xs group bg-slate-900"
                 >
-                  <img
-                    src={photo.url}
-                    alt={photo.caption}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2.5 text-white">
+                  {/* Delete Photo Button */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeletePhoto(photo.id);
+                    }}
+                    className="absolute top-2 right-2 p-1.5 bg-red-600/90 hover:bg-red-700 text-white rounded-lg shadow-md transition-all active:scale-90 z-20 flex items-center justify-center cursor-pointer group-hover:scale-105"
+                    title="Delete Photo"
+                    aria-label="Delete Photo"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+
+                  {imageErrors[photo.id] ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-slate-400 p-3 text-center">
+                      <ImageIcon className="w-6 h-6 mb-1 text-slate-500" />
+                      <span className="text-[10px] font-mono font-bold text-slate-300 truncate max-w-full px-1">
+                        {photo.caption}
+                      </span>
+                      <span className="text-[9px] font-mono text-slate-500 mt-1">{photo.uploadedAt}</span>
+                    </div>
+                  ) : (
+                    <img
+                      src={photo.url}
+                      alt={photo.caption}
+                      onError={() => setImageErrors((prev) => ({ ...prev, [photo.id]: true }))}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    />
+                  )}
+
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2.5 text-white pointer-events-none">
                     <p className="text-[10px] font-black uppercase truncate">{photo.caption}</p>
                     <p className="text-[9px] font-bold text-white/70">{photo.sizeMb} MB • {photo.uploadedAt}</p>
                   </div>
