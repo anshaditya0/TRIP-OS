@@ -170,65 +170,79 @@ export const SavesPage: React.FC<SavesPageProps> = ({
         </div>
 
         {savedPlans.length === 0 ? (
-          <div className="p-8 text-center glass-card border border-dashed border-slate-300">
-            <MapPin className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-            <p className="text-sm font-black uppercase text-slate-600">NO SAVED TRIPS YET</p>
-            <p className="text-xs font-bold text-slate-400 uppercase mt-1">
-              GO TO PLANS PAGE AND CLICK "SAVE TRIP" TO PIN ITINERARIES HERE.
+          <div className="p-8 sm:p-12 text-center glass-card border border-dashed border-slate-300 rounded-3xl">
+            <div className="w-14 h-14 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center mx-auto mb-3">
+              <MapPin className="w-7 h-7" />
+            </div>
+            <p className="text-base font-black uppercase text-slate-800">NO SAVED EXPEDITIONS YET</p>
+            <p className="text-xs font-bold text-slate-400 uppercase mt-1 max-w-sm mx-auto mb-4">
+              Your vault is clean. Create a fresh custom trip in the planner and click "SAVE EXPEDITION" to bookmark it here.
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {savedPlans.map((plan) => (
-              <div
-                key={plan.id}
-                className="glass-card p-5 border border-white/80 flex flex-col justify-between shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="px-2 py-0.5 rounded-md bg-orange-100 text-orange-950 text-[10px] font-black uppercase">
-                      SAVED • {plan.createdAt}
-                    </span>
-                    <span 
-                      className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase text-white shadow-2xs"
-                      style={{ backgroundColor: plan.exhaustion.color }}
+            {savedPlans.map((plan) => {
+              const fromLoc = plan.fromLocation || plan.startLocation || 'ORIGIN';
+              const toLoc = plan.toLocation || plan.endLocation || plan.destination || plan.title || 'DESTINATION';
+              const transport = (plan.transportMode || 'flight').toUpperCase();
+              const totalBudget = plan.budget || 25000;
+              const perPerson = plan.budgetSplit?.perPerson || Math.round(totalBudget / Math.max(1, plan.friendsCount || 1));
+              const exLevel = plan.exhaustion?.level || 'OPTIMAL';
+              const exScore = plan.exhaustion?.score ?? 45;
+              const exColor = plan.exhaustion?.color || '#10b981';
+              const createdDate = plan.createdAt || plan.dates || 'ACTIVE';
+
+              return (
+                <div
+                  key={plan.id}
+                  className="glass-card p-5 border border-white/80 flex flex-col justify-between shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="px-2 py-0.5 rounded-md bg-orange-100 text-orange-950 text-[10px] font-black uppercase">
+                        SAVED • {createdDate}
+                      </span>
+                      <span 
+                        className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase text-white shadow-2xs"
+                        style={{ backgroundColor: exColor }}
+                      >
+                        {exLevel} ({exScore}%)
+                      </span>
+                    </div>
+
+                    <h3 className="text-base font-black uppercase text-slate-900 mb-1">
+                      {plan.title || `${toLoc} Expedition`}
+                    </h3>
+                    <p className="text-xs font-bold text-slate-600 uppercase mb-3">
+                      📍 {fromLoc} ➔ {toLoc} ({transport})
+                    </p>
+
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-slate-100/70 text-xs font-black uppercase mb-4">
+                      <span>BUDGET: ₹{totalBudget.toLocaleString()}</span>
+                      <span className="text-orange-700">₹{perPerson.toLocaleString()} / PERSON</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-100">
+                    <button
+                      onClick={() => onDeletePlan(plan.id)}
+                      className="p-2.5 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 active:scale-95 transition-all cursor-pointer border border-slate-200"
+                      title="Remove saved plan"
                     >
-                      {plan.exhaustion.level} ({plan.exhaustion.score}%)
-                    </span>
-                  </div>
+                      <Trash2 className="w-4 h-4" />
+                    </button>
 
-                  <h3 className="text-base font-black uppercase text-slate-900 mb-1">
-                    {plan.title}
-                  </h3>
-                  <p className="text-xs font-bold text-slate-600 uppercase mb-3">
-                    📍 {plan.fromLocation} ➔ {plan.toLocation} ({plan.transportMode.toUpperCase()})
-                  </p>
-
-                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-100/70 text-xs font-black uppercase mb-4">
-                    <span>BUDGET: ₹{plan.budget.toLocaleString()}</span>
-                    <span className="text-orange-700">₹{plan.budgetSplit.perPerson.toLocaleString()} / PERSON</span>
+                    <button
+                      onClick={() => onSelectPlan(plan)}
+                      className="flex-1 py-2.5 bg-slate-900 hover:bg-black text-white text-xs font-mono font-bold uppercase tracking-wider text-center cursor-pointer shadow-md rounded-xl active:scale-95 transition-all flex items-center justify-center gap-1.5 border border-slate-800"
+                    >
+                      <span>OPEN DETAILED BLUEPRINT</span>
+                      <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
+                    </button>
                   </div>
                 </div>
-
-                <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-100">
-                  <button
-                    onClick={() => onDeletePlan(plan.id)}
-                    className="p-2.5 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 active:scale-95 transition-all cursor-pointer border border-slate-200"
-                    title="Remove saved plan"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-
-                  <button
-                    onClick={() => onSelectPlan(plan)}
-                    className="flex-1 py-2.5 bg-slate-900 hover:bg-black text-white text-xs font-mono font-bold uppercase tracking-wider text-center cursor-pointer shadow-md rounded-xl active:scale-95 transition-all flex items-center justify-center gap-1.5 border border-slate-800"
-                  >
-                    <span>OPEN DETAILED BLUEPRINT</span>
-                    <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

@@ -126,7 +126,7 @@ export default function App() {
   // Plans state
   const [savedPlans, setSavedPlans] = useState<ItineraryPlan[]>(INITIAL_SAVED_PLANS);
   const [currentPlan, setCurrentPlan] = useState<ItineraryPlan | null>(null);
-  const [plannerDestination, setPlannerDestination] = useState<string>('Goa Coastline');
+  const [plannerDestination, setPlannerDestination] = useState<string>('');
   const [plannerKey, setPlannerKey] = useState<number>(0);
 
   // Synchronize real saved trips directly from backend PostgreSQL database
@@ -140,6 +140,9 @@ export default function App() {
           destination: t.end_location,
           finalDestination: t.end_location,
           preferredDestination: t.end_location,
+          fromLocation: t.start_location || 'Current City',
+          toLocation: t.end_location,
+          transportMode: t.transport_mode || 'flight',
           dates: `${t.start_date} to ${t.end_date}`,
           startDate: t.start_date,
           endDate: t.end_date,
@@ -150,12 +153,21 @@ export default function App() {
           weatherType: detectWeatherType(t.end_location),
           isSaved: true,
           inviteCode: t.invite_code,
+          budgetSplit: {
+            totalBudget: Number(t.budget) || 25000,
+            perPerson: Math.round((Number(t.budget) || 25000) / (Number(t.member_count) || 1)),
+            stayTotal: Math.round((Number(t.budget) || 25000) * 0.4),
+            foodTotal: Math.round((Number(t.budget) || 25000) * 0.3),
+            activitiesTotal: Math.round((Number(t.budget) || 25000) * 0.2),
+            contingency: Math.round((Number(t.budget) || 25000) * 0.1)
+          },
           exhaustion: {
             score: 45,
             level: 'OPTIMAL',
             color: '#10b981',
             details: 'Calculated from backend telemetry'
           },
+          dayPlans: [],
           schedule: [],
           members: []
         }));
@@ -187,48 +199,9 @@ export default function App() {
     );
   };
 
-  // Requirement 1 & 3: Mission telemetry notifications state
+  // Requirement 1 & 3: Mission telemetry notifications state - fresh and clean
   const [isNotificationsOpen, setIsNotificationsOpen] = useState<boolean>(false);
-  const [notifications, setNotifications] = useState<AppNotification[]>([
-    {
-      id: 'notif-1',
-      type: 'TRIP_UPCOMING',
-      title: 'UPCOMING EXPEDITION IN 7 DAYS',
-      message: 'Goa Coastline Expedition begins next Saturday. 28°C sunny telemetry projected. Offline emergency dossier is ready.',
-      timestamp: '2 hours ago',
-      read: false,
-      actionLabel: 'VIEW TRIP',
-      actionTab: 'plans'
-    },
-    {
-      id: 'notif-2',
-      type: 'JOIN_REQUEST',
-      title: 'KABIR REQUESTED TO JOIN TRIP',
-      message: 'Kabir Mehta entered invite code EXP-GOA-7829. Leader approval required before GroupDNA calculation.',
-      timestamp: '3 hours ago',
-      read: false,
-      tripId: 'plan-1',
-      memberId: 'member-4'
-    },
-    {
-      id: 'notif-3',
-      type: 'PREFERENCES_SUBMITTED',
-      title: 'GROUPDNA VIBE UPDATE',
-      message: '3 of 4 squad members logged their 9 Vibe Preferences. Ready to calculate collective vibe.',
-      timestamp: '5 hours ago',
-      read: false,
-      actionLabel: 'OPEN DNA',
-      actionTab: 'plans'
-    },
-    {
-      id: 'notif-4',
-      type: 'BUDGET_ALERT',
-      title: 'BUDGET TELEMETRY OPTIMAL',
-      message: '₹36,900 of ₹45,000 budget remaining. Daily burn rate is ₹3,850/person — healthy buffer.',
-      timestamp: 'Yesterday',
-      read: true
-    }
-  ]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   const handleStartNewPlan = () => {
     setPlannerDestination('');
@@ -694,6 +667,7 @@ export default function App() {
                   onSavePlan={handleSavePlan}
                   initialDestination={plannerDestination}
                   weatherType={weatherTheme}
+                  user={user}
                 />
               </motion.div>
             )}

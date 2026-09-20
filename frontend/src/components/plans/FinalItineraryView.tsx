@@ -52,8 +52,64 @@ export const FinalItineraryView: React.FC<FinalItineraryViewProps> = ({
   const [selectedVenueIndex, setSelectedVenueIndex] = useState<number>(0);
   const [customSchedules, setCustomSchedules] = useState<Record<number, any[]>>({});
 
-  const activeDay = plan.dayPlans.find(d => d.dayNumber === selectedDayNumber) || plan.dayPlans[0];
-  const currentSchedule = customSchedules[selectedDayNumber] || activeDay.schedule;
+  const safeTo = plan?.toLocation || plan?.endLocation || plan?.destination || 'Expedition Destination';
+  const safeFrom = plan?.fromLocation || plan?.startLocation || 'Departure Hub';
+  const safeTransport = (plan?.transportMode || 'flight').toUpperCase();
+  const safeBudget = plan?.budget || 25000;
+  const safeFriendsCount = plan?.friendsCount || 1;
+
+  const safeDayPlans: DayPlan[] = (Array.isArray(plan?.dayPlans) && plan.dayPlans.length > 0)
+    ? plan.dayPlans
+    : [
+        {
+          dayNumber: 1,
+          theme: 'Arrival & Landmark Exploration',
+          schedule: (Array.isArray(plan?.schedule) && plan.schedule.length > 0) ? plan.schedule : [
+            { time: plan?.dailyStartTime || '09:00 AM', activity: `Arrive in ${safeTo} & Check-In`, cost: 0, type: 'TRANSIT' },
+            { time: '11:30 AM', activity: 'Local Heritage Sightseeing & Promenade', cost: 500, type: 'CULTURE' },
+            { time: '01:30 PM', activity: 'Authentic Regional Lunch & Tasting', cost: 800, type: 'FOOD' },
+            { time: '04:30 PM', activity: 'Sunset Viewpoint & Golden Hour Photography', cost: 200, type: 'EXPLORATION' },
+            { time: '08:00 PM', activity: 'Evening Welcome Dinner & Crew Debrief', cost: 1200, type: 'FOOD' }
+          ],
+          attractions: [],
+          stayOptions: [],
+          diningRecommendations: [],
+          shoppingRecommendations: [],
+          dayEstimatedCost: 2700
+        }
+      ];
+
+  const safeExhaustion = plan?.exhaustion || {
+    score: 42,
+    level: 'OPTIMAL',
+    color: '#10b981',
+    gradient: 'from-emerald-500 to-teal-600',
+    description: 'Balanced pacing',
+    travelDistanceKm: 450,
+    travelTimeHours: 4,
+    paceFactor: 'STEADY',
+    physicalStrain: 35,
+    transitStrain: 30,
+    recoveryScore: 85,
+    recoveryTips: ['Stay hydrated']
+  };
+
+  const safeBudgetSplit = plan?.budgetSplit || {
+    transport: Math.round(safeBudget * 0.3),
+    stay: Math.round(safeBudget * 0.35),
+    food: Math.round(safeBudget * 0.15),
+    activities: Math.round(safeBudget * 0.1),
+    shopping: Math.round(safeBudget * 0.05),
+    emergencyBuffer: Math.round(safeBudget * 0.05),
+    total: safeBudget,
+    perPerson: Math.round(safeBudget / Math.max(1, safeFriendsCount))
+  };
+
+  const safePopularStays = Array.isArray(plan?.popularStays) ? plan.popularStays : [];
+  const safeDiningHighlights = Array.isArray(plan?.diningHighlights) ? plan.diningHighlights : [];
+
+  const activeDay = safeDayPlans.find(d => d.dayNumber === selectedDayNumber) || safeDayPlans[0];
+  const currentSchedule = customSchedules[selectedDayNumber] || activeDay?.schedule || [];
 
   const formatDayDate = (dayNumber: number) => {
     if (!plan.startDate) return null;
@@ -272,27 +328,27 @@ Generated via Yatra Trip Itinerary Planner
               </span>
               <span 
                 className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase text-white font-mono"
-                style={{ backgroundColor: plan.exhaustion.color }}
+                style={{ backgroundColor: safeExhaustion.color }}
               >
-                {plan.exhaustion.level} PACING
+                {safeExhaustion.level} PACING
               </span>
-              {plan.startDate && (
+              {plan?.startDate && (
                 <span className="px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-900 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 font-mono">
                   <Calendar className="w-3 h-3 text-orange-600" />
                   {new Date(plan.startDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase()}
                 </span>
               )}
               <span className="text-[10px] font-mono-telemetry text-slate-500 uppercase font-bold">
-                {plan.dayPlans.length} DAYS • ~{plan.exhaustion.travelDistanceKm} KM
+                {safeDayPlans.length} DAYS • ~{safeExhaustion.travelDistanceKm} KM
               </span>
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-black uppercase text-slate-900 tracking-tight">
-              {plan.title}
+              {plan?.title || `${safeTo} Expedition`}
             </h1>
 
             <p className="text-xs font-bold text-slate-600 uppercase mt-1">
-              {plan.fromLocation} TO {plan.toLocation} • {plan.friendsCount} {plan.friendsCount === 1 ? 'TRAVELER' : 'TRAVELERS'} • {plan.transportMode.toUpperCase()}
+              {safeFrom} TO {safeTo} • {safeFriendsCount} {safeFriendsCount === 1 ? 'TRAVELER' : 'TRAVELERS'} • {safeTransport}
             </p>
           </div>
 
@@ -365,19 +421,19 @@ Generated via Yatra Trip Itinerary Planner
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-200/80">
           <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/60">
             <span className="text-[9px] font-mono font-bold uppercase text-slate-500 block">TOTAL BUDGET</span>
-            <span className="text-sm font-black text-slate-900 font-mono">₹{plan.budget.toLocaleString()}</span>
+            <span className="text-sm font-black text-slate-900 font-mono">₹{safeBudget.toLocaleString()}</span>
           </div>
           <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200/60">
             <span className="text-[9px] font-mono font-bold uppercase text-emerald-800 block">PER EXPLORER</span>
-            <span className="text-sm font-black text-emerald-900 font-mono">₹{plan.budgetSplit.perPerson.toLocaleString()}</span>
+            <span className="text-sm font-black text-emerald-900 font-mono">₹{safeBudgetSplit.perPerson.toLocaleString()}</span>
           </div>
           <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/60">
             <span className="text-[9px] font-mono font-bold uppercase text-slate-500 block">TRANSIT ESTIMATE</span>
-            <span className="text-sm font-black text-slate-900 font-mono">~{plan.exhaustion.travelTimeHours} HRS</span>
+            <span className="text-sm font-black text-slate-900 font-mono">~{safeExhaustion.travelTimeHours} HRS</span>
           </div>
           <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/60">
             <span className="text-[9px] font-mono font-bold uppercase text-slate-500 block">BUFFER / RECOVERY</span>
-            <span className="text-sm font-black text-slate-900 font-mono">{plan.exhaustion.recoveryScore}% SCORE</span>
+            <span className="text-sm font-black text-slate-900 font-mono">{safeExhaustion.recoveryScore}% SCORE</span>
           </div>
         </div>
 
@@ -446,10 +502,10 @@ Generated via Yatra Trip Itinerary Planner
       {/* Navigation Sub-Tabs within Final Itinerary */}
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200/80 pb-2">
         {[
-          { id: 'schedule' as ItineraryTab, label: 'DAILY SCHEDULE', icon: Calendar, badge: `${plan.dayPlans.length} DAYS` },
+          { id: 'schedule' as ItineraryTab, label: 'DAILY SCHEDULE', icon: Calendar, badge: `${safeDayPlans.length} DAYS` },
           { id: 'map' as ItineraryTab, label: 'CORRIDOR MAP & 3D EARTH', icon: MapPin },
-          { id: 'stays-dining' as ItineraryTab, label: 'STAYS & DINING', icon: BedDouble, badge: `${plan.popularStays.length + plan.diningHighlights.length}` },
-          { id: 'budget-fatigue' as ItineraryTab, label: 'BUDGET & PACING', icon: Wallet, badge: `${plan.exhaustion.score}% FATIGUE` },
+          { id: 'stays-dining' as ItineraryTab, label: 'STAYS & DINING', icon: BedDouble, badge: `${safePopularStays.length + safeDiningHighlights.length}` },
+          { id: 'budget-fatigue' as ItineraryTab, label: 'BUDGET & PACING', icon: Wallet, badge: `${safeExhaustion.score}% FATIGUE` },
           { id: 'what-if' as ItineraryTab, label: 'WHAT IF? SIMULATOR', icon: Zap, badge: 'PREMIUM' },
         ].map((tab) => {
           const Icon = tab.icon;
@@ -491,7 +547,7 @@ Generated via Yatra Trip Itinerary Planner
           {/* Day Selector Buttons */}
           <div className="flex flex-wrap items-center justify-between gap-3 bg-white/70 p-3 rounded-2xl border border-slate-200/70 shadow-2xs">
             <div className="flex flex-wrap gap-2">
-              {plan.dayPlans.map((day) => (
+              {safeDayPlans.map((day) => (
                 <button
                   id={`btn-select-day-${day.dayNumber}`}
                   key={day.dayNumber}

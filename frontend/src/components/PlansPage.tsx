@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence } from 'motion/react';
-import { ItineraryPlan, TransportMode, WeatherType, MoodMeterConfig, TripMember, GroupDNA } from '../types';
+import { ItineraryPlan, TransportMode, WeatherType, MoodMeterConfig, TripMember, GroupDNA, UserProfile } from '../types';
 import { generateCustomItinerary, estimateDistanceKm, calculateExhaustion } from '../utils/planGenerator';
 import { DEFAULT_MOOD_METER } from './DynamicMoodMeter';
 import { PlanStepperHeader, WizardStep } from './plans/PlanStepperHeader';
@@ -19,6 +19,7 @@ interface PlansPageProps {
   onSavePlan: (plan: ItineraryPlan) => void;
   initialDestination?: string;
   weatherType: WeatherType;
+  user?: UserProfile;
 }
 
 export const PlansPage: React.FC<PlansPageProps> = ({
@@ -27,9 +28,15 @@ export const PlansPage: React.FC<PlansPageProps> = ({
   onSavePlan,
   initialDestination = '',
   weatherType,
+  user,
 }) => {
-  // Determine initial step: if a plan already exists, show it (step 6); otherwise start at step 1
-  const [currentStep, setCurrentStep] = useState<WizardStep>(currentPlan ? 6 : 1);
+  // Determine initial step: show step 6 ONLY if complete itinerary exists; otherwise start clean at step 1
+  const [currentStep, setCurrentStep] = useState<WizardStep>(() => {
+    if (currentPlan && Array.isArray(currentPlan.dayPlans) && currentPlan.dayPlans.length > 0) {
+      return 6;
+    }
+    return 1;
+  });
 
   // Form parameter state
   const getInitialTripDate = () => {
@@ -41,60 +48,45 @@ export const PlansPage: React.FC<PlansPageProps> = ({
     return `${yyyy}-${mm}-${dd}`;
   };
 
-  const [fromLocation, setFromLocation] = useState(currentPlan?.fromLocation || 'New Delhi');
+  const [fromLocation, setFromLocation] = useState(currentPlan?.fromLocation || '');
   
   // Requirement 1 & 2: destination filled during creation is provisional recommendation/preference
-  const [toLocation, setToLocation] = useState(initialDestination || currentPlan?.toLocation || 'Goa Coastline');
-  const [preferredDestination, setPreferredDestination] = useState(initialDestination || currentPlan?.preferredDestination || toLocation);
-  const [finalDestination, setFinalDestination] = useState(currentPlan?.finalDestination || toLocation);
+  const [toLocation, setToLocation] = useState(initialDestination || currentPlan?.toLocation || '');
+  const [preferredDestination, setPreferredDestination] = useState(initialDestination || currentPlan?.preferredDestination || initialDestination || '');
+  const [finalDestination, setFinalDestination] = useState(currentPlan?.finalDestination || initialDestination || '');
   const [destinationReason, setDestinationReason] = useState(currentPlan?.destinationReason || 'Calibrated and approved according to squad GroupDNA');
 
   // Requirement 5: time to begin the visit each day
   const [dailyStartTime, setDailyStartTime] = useState<string>(currentPlan?.dailyStartTime || '09:00 AM');
 
-  // Requirement 1: Members and collaborative squad
-  const [inviteCode] = useState<string>(() => currentPlan?.inviteCode || `EXP-${toLocation.slice(0, 3).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`);
+  // Dynamic invite code generated cleanly for this trip
+  const [inviteCode] = useState<string>(() => currentPlan?.inviteCode || `EXP-${(toLocation || 'TRIP').slice(0, 3).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`);
   const [isAddMembersModalOpen, setIsAddMembersModalOpen] = useState(false);
-  const [members, setMembers] = useState<TripMember[]>(() => currentPlan?.members || [
-    {
-      id: 'leader-1',
-      name: 'Sparsh Raj (You)',
-      email: 'sparsh@tripos.app',
-      role: 'LEADER',
-      status: 'APPROVED',
-      preferencesSubmitted: true,
-      preferences: currentPlan?.moodMeter || DEFAULT_MOOD_METER
-    },
-    {
-      id: 'member-2',
-      name: 'Aanya Sharma',
-      email: 'aanya@tripos.app',
-      role: 'MEMBER',
-      status: 'APPROVED',
-      preferencesSubmitted: false,
-    },
-    {
-      id: 'member-3',
-      name: 'Rohan Verma',
-      email: 'rohan@tripos.app',
-      role: 'MEMBER',
-      status: 'APPROVED',
-      preferencesSubmitted: false,
-    },
-    {
-      id: 'member-4',
-      name: 'Kabir Mehta',
-      email: 'kabir@tripos.app',
-      role: 'MEMBER',
-      status: 'PENDING',
-      preferencesSubmitted: false,
+
+  // Clean, fresh member initialization: Only the real authenticated user starts as Leader. Zero fake members!
+  const [members, setMembers] = useState<TripMember[]>(() => {
+    if (currentPlan?.members && currentPlan.members.length > 0) {
+      return currentPlan.members;
     }
-  ]);
+    const leaderName = user?.name ? `${user.name} (You)` : 'You (Leader)';
+    const leaderEmail = user?.email || 'traveler@tripos.world';
+    return [
+      {
+        id: 'leader-1',
+        name: leaderName,
+        email: leaderEmail,
+        role: 'LEADER',
+        status: 'APPROVED',
+        preferencesSubmitted: false,
+        preferences: currentPlan?.moodMeter || DEFAULT_MOOD_METER
+      }
+    ];
+  });
 
   const [groupDNA, setGroupDNA] = useState<GroupDNA | null>(currentPlan?.groupDNA || null);
 
-  const [friendsCount, setFriendsCount] = useState(currentPlan?.friendsCount || 3);
-  const [budget, setBudget] = useState(currentPlan?.budget || 45000);
+  const [friendsCount, setFriendsCount] = useState(currentPlan?.friendsCount || 1);
+  const [budget, setBudget] = useState(currentPlan?.budget || 25000);
   const [transportMode, setTransportMode] = useState<TransportMode>(currentPlan?.transportMode || 'flight');
   const [selectedActivities, setSelectedActivities] = useState<string[]>(
     currentPlan?.preferredActivities || ['HERITAGE', 'CULINARY', 'BEACH']
