@@ -19,7 +19,21 @@ interface StepGroupDNAProps {
   onBack: () => void;
 }
 
-
+export const PREFERENCE_DIMENSIONS: {
+  key: keyof MoodMeterConfig;
+  label: string;
+  emoji: string;
+}[] = [
+  { key: 'adventure', label: 'ADVENTURE', emoji: '🧭' },
+  { key: 'nature', label: 'NATURE', emoji: '🌲' },
+  { key: 'food', label: 'FOOD & CUISINE', emoji: '🍲' },
+  { key: 'photography', label: 'PHOTOGRAPHY', emoji: '📸' },
+  { key: 'nightlife', label: 'NIGHTLIFE', emoji: '🌙' },
+  { key: 'relaxation', label: 'RELAXATION', emoji: '✨' },
+  { key: 'budgetSensitivity', label: 'BUDGET', emoji: '💰' },
+  { key: 'walkingTolerance', label: 'WALKING', emoji: '👟' },
+  { key: 'crowdTolerance', label: 'CROWD', emoji: '👥' },
+];
 
 export const StepGroupDNA: React.FC<StepGroupDNAProps> = ({
   tripId,
