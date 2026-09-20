@@ -70,7 +70,7 @@ export const LiquidNavbar: React.FC<LiquidNavbarProps> = ({
               <div className={`w-10 h-10 rounded-xl text-amber-400 font-black text-sm flex items-center justify-center ring-2 ring-white shadow-xs ${
                 currentTab === 'profile' ? 'bg-slate-800' : 'bg-gradient-to-tr from-slate-900 to-slate-800'
               }`}>
-                {user.name.split(' ').map(n => n[0]).join('').slice(0, 2) || 'SR'}
+                {user.name ? user.name.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2) : 'EX'}
               </div>
             )}
             <div className="min-w-0 flex-1">

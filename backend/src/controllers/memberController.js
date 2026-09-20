@@ -42,6 +42,22 @@ const joinTrip = async (req, res) => {
             });
         }
 
+        // Ensure user exists in users table
+        try {
+            await pool.query(
+                `INSERT INTO users (id, name, email)
+                 VALUES ($1, $2, $3)
+                 ON CONFLICT (id) DO NOTHING`,
+                [
+                    req.user.id,
+                    req.user.user_metadata?.name || req.user.name || "Explorer",
+                    req.user.email || "member@tripos.world"
+                ]
+            );
+        } catch (uErr) {
+            logger.warn("Ensure user exists notice in joinTrip:", uErr.message);
+        }
+
         // Create pending membership
         await pool.query(
             `INSERT INTO trip_members

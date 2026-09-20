@@ -163,14 +163,14 @@ export async function evaluateTripBadgeApi(params: {
 // 3. Trips & Itineraries
 export async function createTripApi(tripData: {
   name: string;
-  startDate: string;
+  startDate?: string;
   startTime?: string;
-  startLocation: string;
-  endDate: string;
+  startLocation?: string;
+  endDate?: string;
   endTime?: string;
   endLocation: string;
   budget: number;
-  transportMode: string;
+  transportMode?: string;
 }) {
   try {
     const res = await fetch(`${API_BASE_URL}/trips`, {
@@ -178,18 +178,19 @@ export async function createTripApi(tripData: {
       headers: DEFAULT_AUTH_HEADER,
       body: JSON.stringify({
         name: tripData.name,
-        startDate: tripData.startDate,
+        startDate: tripData.startDate || new Date().toISOString().split('T')[0],
         startTime: tripData.startTime || '08:00',
-        startLocation: tripData.startLocation,
-        endDate: tripData.endDate,
+        startLocation: tripData.startLocation || 'Current City',
+        endDate: tripData.endDate || new Date(Date.now() + 4 * 86400000).toISOString().split('T')[0],
         endTime: tripData.endTime || '20:00',
         endLocation: tripData.endLocation,
         budget: tripData.budget,
-        transportMode: tripData.transportMode
+        transportMode: tripData.transportMode || 'FLIGHT'
       })
     });
     if (!res.ok) throw new Error('Failed to create trip');
-    return await res.json();
+    const data = await res.json();
+    return data.trip || data;
   } catch (err) {
     console.warn('[TRIP//OS API] Create trip fallback:', err);
     return null;
@@ -350,6 +351,21 @@ export async function fetchIndianCitiesApi() {
     return await res.json();
   } catch (err) {
     console.warn('[TRIP//OS API] Indian cities fallback:', err);
+    return [];
+  }
+}
+
+// 7B. Base Trip Database Engine
+export async function fetchUserTripsApi(): Promise<any[]> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/trips`, {
+      headers: DEFAULT_AUTH_HEADER
+    });
+    if (!res.ok) throw new Error('Failed to fetch trips');
+    const data = await res.json();
+    return data.trips || [];
+  } catch (err) {
+    console.warn('[TRIP//OS API] Fetch trips fallback:', err);
     return [];
   }
 }

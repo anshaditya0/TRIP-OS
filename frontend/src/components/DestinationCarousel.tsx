@@ -338,6 +338,9 @@ export const DestinationCarousel: React.FC<DestinationCarouselProps> = ({
                           src={dest.image}
                           alt={dest.name}
                           loading="lazy"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1506461883276-594a12b11cf3?auto=format&fit=crop&w=800&q=80';
+                          }}
                           className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-108"
                         />
 
@@ -527,7 +530,14 @@ export const DestinationCarousel: React.FC<DestinationCarouselProps> = ({
                     <div key={rev.id} className="p-3.5 rounded-2xl bg-white/95 border border-neutral-200/80 shadow-xs">
                       <div className="flex items-center justify-between mb-1.5">
                         <div className="flex items-center gap-2">
-                          <img src={rev.avatar} alt={rev.author} className="w-7 h-7 rounded-full object-cover" />
+                          <img 
+                            src={rev.avatar} 
+                            alt={rev.author} 
+                            className="w-7 h-7 rounded-full object-cover ring-1 ring-slate-200" 
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80';
+                            }}
+                          />
                           <span className="text-xs font-black uppercase text-neutral-900">{rev.author}</span>
                         </div>
                         <span className="text-[10px] font-bold font-mono text-neutral-500 uppercase">{rev.date}</span>

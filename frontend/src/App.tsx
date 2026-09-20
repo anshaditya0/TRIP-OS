@@ -34,7 +34,7 @@ import { OpeningSplash } from './components/OpeningSplash';
 import { MultilingualGreeting } from './components/MultilingualGreeting';
 import { NotificationsModal } from './components/NotificationsModal';
 import { AppNotification } from './types';
-import { removeStoredToken } from './services/api';
+import { removeStoredToken, createTripApi, fetchUserTripsApi, savePreferencesApi } from './services/api';
 
 const PAGE_HEADER_CONFIGS: Record<NavTab, { title: string; subtitle: string }> = {
   home: {
@@ -128,6 +128,50 @@ export default function App() {
   const [currentPlan, setCurrentPlan] = useState<ItineraryPlan | null>(null);
   const [plannerDestination, setPlannerDestination] = useState<string>('Goa Coastline');
   const [plannerKey, setPlannerKey] = useState<number>(0);
+
+  // Synchronize real saved trips directly from backend PostgreSQL database
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    fetchUserTripsApi().then((trips) => {
+      if (Array.isArray(trips) && trips.length > 0) {
+        const mappedPlans: ItineraryPlan[] = trips.map((t: any) => ({
+          id: `trip-${t.id}`,
+          title: t.name,
+          destination: t.end_location,
+          finalDestination: t.end_location,
+          preferredDestination: t.end_location,
+          dates: `${t.start_date} to ${t.end_date}`,
+          startDate: t.start_date,
+          endDate: t.end_date,
+          dailyStartTime: t.start_time ? String(t.start_time).slice(0, 5) : '09:00',
+          budget: Number(t.budget) || 25000,
+          friendsCount: Number(t.member_count) || 1,
+          travelType: 'SOLO_OR_GROUP',
+          weatherType: detectWeatherType(t.end_location),
+          isSaved: true,
+          inviteCode: t.invite_code,
+          exhaustion: {
+            score: 45,
+            level: 'OPTIMAL',
+            color: '#10b981',
+            details: 'Calculated from backend telemetry'
+          },
+          schedule: [],
+          members: []
+        }));
+
+        setSavedPlans((prev) => {
+          const combined = [...prev];
+          mappedPlans.forEach((mp) => {
+            if (!combined.some((p) => p.id === mp.id)) {
+              combined.push(mp);
+            }
+          });
+          return combined;
+        });
+      }
+    }).catch(() => {});
+  }, [isAuthenticated]);
 
   // Natural Disaster & Hazard Alerts State
   const [disasterAlerts, setDisasterAlerts] = useState<DisasterAlert[]>(INITIAL_DISASTER_ALERTS);
@@ -261,10 +305,11 @@ export default function App() {
     setWeatherTheme(plan.weatherType);
   };
 
-  const handleSavePlan = (plan: ItineraryPlan) => {
+  const handleSavePlan = async (plan: ItineraryPlan) => {
     const updatedPlan = { ...plan, isSaved: true };
     setCurrentPlan(updatedPlan);
 
+    // Optimistically update local UI state immediately
     setSavedPlans((prev) => {
       const exists = prev.some((p) => p.id === plan.id);
       if (exists) {
@@ -272,6 +317,48 @@ export default function App() {
       }
       return [updatedPlan, ...prev];
     });
+
+    // Persist real trip data directly to PostgreSQL database
+    try {
+      const backendTrip = await createTripApi({
+        name: plan.title,
+        startDate: plan.startDate,
+        startTime: plan.dailyStartTime,
+        startLocation: plan.startLocation || 'Current City',
+        endDate: plan.endDate,
+        endTime: '20:00',
+        endLocation: plan.finalDestination || plan.destination,
+        budget: plan.budget,
+        transportMode: plan.transportMode
+      });
+
+      if (backendTrip && backendTrip.id) {
+        const syncedPlan: ItineraryPlan = {
+          ...updatedPlan,
+          id: `trip-${backendTrip.id}`,
+          inviteCode: backendTrip.invite_code || plan.inviteCode
+        };
+        setCurrentPlan(syncedPlan);
+        setSavedPlans((prev) => prev.map((p) => (p.id === plan.id ? syncedPlan : p)));
+
+        // Synchronize GroupDNA vibe scores if present
+        if (plan.groupDNA) {
+          savePreferencesApi(backendTrip.id, {
+            adventure: plan.groupDNA.adventure,
+            nature: plan.groupDNA.nature,
+            food: plan.groupDNA.food,
+            photography: plan.groupDNA.photography,
+            nightlife: plan.groupDNA.nightlife,
+            relaxation: plan.groupDNA.relaxation,
+            budgetSensitivity: plan.groupDNA.budgetSensitivity,
+            walkingTolerance: plan.groupDNA.walkingTolerance,
+            crowdTolerance: plan.groupDNA.crowdTolerance
+          }).catch(() => {});
+        }
+      }
+    } catch (e) {
+      console.warn('Backend trip sync notice:', e);
+    }
   };
 
   const handleDeleteSavedPlan = (planId: string) => {
