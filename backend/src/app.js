@@ -56,11 +56,11 @@ app.get("/api/db-test", async (req, res) => {
     }
 });
 
-// Mount Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/trips", tripRoutes);
-app.use("/api/destinations", destinationRoutes);
-app.use("/api/badges", badgeRoutes);
+// Mount Routes — support both /api/... and root /... paths for seamless Vercel serverless proxying
+app.use(["/api/auth", "/auth"], authRoutes);
+app.use(["/api/trips", "/trips"], tripRoutes);
+app.use(["/api/destinations", "/destinations"], destinationRoutes);
+app.use(["/api/badges", "/badges"], badgeRoutes);
 
 // Error Handling
 app.use(notFoundHandler);

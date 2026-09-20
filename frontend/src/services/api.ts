@@ -3,11 +3,20 @@
  * Connects frontend directly with the production Node/Express + PostgreSQL + Supabase backend.
  */
 
-const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL)
-  ? (import.meta.env.VITE_API_BASE_URL as string).replace(/\/$/, '')
-  : (typeof window !== 'undefined' && window.location.origin
-      ? '/api'
-      : 'http://localhost:5000/api');
+function getApiBaseUrl(): string {
+  let base = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL)
+    ? (import.meta.env.VITE_API_BASE_URL as string).replace(/\/$/, '')
+    : (typeof window !== 'undefined' && window.location.origin
+        ? '/api'
+        : 'http://localhost:5000/api');
+
+  if (base.startsWith('http') && !base.endsWith('/api')) {
+    base = `${base}/api`;
+  }
+  return base;
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 export function getStoredToken(): string {
   if (typeof window !== 'undefined') {
