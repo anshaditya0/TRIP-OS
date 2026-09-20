@@ -63,17 +63,17 @@ export const FinalItineraryView: React.FC<FinalItineraryViewProps> = ({
     : [
         {
           dayNumber: 1,
+          title: 'DAY 1: ARRIVAL & LANDMARK EXPLORATION',
+          highlights: 'Arrival & Landmark Exploration',
           theme: 'Arrival & Landmark Exploration',
           schedule: (Array.isArray(plan?.schedule) && plan.schedule.length > 0) ? plan.schedule : [
-            { time: plan?.dailyStartTime || '09:00 AM', activity: `Arrive in ${safeTo} & Check-In`, cost: 0, type: 'TRANSIT' },
-            { time: '11:30 AM', activity: 'Local Heritage Sightseeing & Promenade', cost: 500, type: 'CULTURE' },
-            { time: '01:30 PM', activity: 'Authentic Regional Lunch & Tasting', cost: 800, type: 'FOOD' },
-            { time: '04:30 PM', activity: 'Sunset Viewpoint & Golden Hour Photography', cost: 200, type: 'EXPLORATION' },
-            { time: '08:00 PM', activity: 'Evening Welcome Dinner & Crew Debrief', cost: 1200, type: 'FOOD' }
+            { time: plan?.dailyStartTime || '09:00 AM', activity: `Arrive in ${safeTo} & Check-In`, cost: 0, tips: 'Basecamp check-in', location: safeTo },
+            { time: '11:30 AM', activity: 'Local Heritage Sightseeing & Promenade', cost: 500, tips: 'Explore historical quarter', location: safeTo },
+            { time: '01:30 PM', activity: 'Authentic Regional Lunch & Tasting', cost: 800, tips: 'Savor regional spices', location: safeTo },
+            { time: '04:30 PM', activity: 'Sunset Viewpoint & Golden Hour Photography', cost: 200, tips: 'Golden hour captures', location: safeTo },
+            { time: '08:00 PM', activity: 'Evening Welcome Dinner & Crew Debrief', cost: 1200, tips: 'Relax with your squad', location: safeTo }
           ],
-          attractions: [],
-          stayOptions: [],
-          diningRecommendations: [],
+          diningOptions: plan?.diningHighlights || [],
           shoppingRecommendations: [],
           dayEstimatedCost: 2700
         }

@@ -85,6 +85,7 @@ export interface DayPlan {
   dayNumber: number;
   title: string;
   highlights: string;
+  theme?: string;
   schedule: DayScheduleItem[];
   diningOptions: DiningOption[];
   shoppingRecommendations: { item: string; market: string; priceRange: string }[];
@@ -160,6 +161,12 @@ export interface ItineraryPlan {
   title: string;
   fromLocation: string;
   toLocation: string;
+  destination?: string;
+  startLocation?: string;
+  endLocation?: string;
+  dates?: string;
+  startDate?: string;
+  endDate?: string;
   preferredDestination?: string;
   finalDestination?: string;
   dailyStartTime?: string; // e.g. "09:00 AM"
@@ -176,6 +183,7 @@ export interface ItineraryPlan {
   inviteCode?: string;
   exhaustion: ExhaustionData;
   dayPlans: DayPlan[];
+  schedule?: DayScheduleItem[];
   topSights: SightItem[];
   popularStays: HotelStay[];
   diningHighlights: DiningOption[];
@@ -185,7 +193,6 @@ export interface ItineraryPlan {
   destinationCoords: { lat: number; lng: number };
   createdAt: string;
   isSaved?: boolean;
-  startDate?: string;
   durationDays?: number;
 }
 

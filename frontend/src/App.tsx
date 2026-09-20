@@ -13,7 +13,7 @@ import {
   DEFAULT_USER_PROFILE, INITIAL_SAVED_PLANS, POPULAR_DESTINATIONS, 
   WEATHER_CONFIGS, INITIAL_DISASTER_ALERTS 
 } from './data/travelData';
-import { detectWeatherType } from './utils/planGenerator';
+import { detectWeatherType, generateCustomItinerary } from './utils/planGenerator';
 
 import { ParallaxMapLogin } from './components/ParallaxMapLogin';
 import { LiquidNavbar, NavTab } from './components/LiquidNavbar';
@@ -139,43 +139,38 @@ export default function App() {
     if (!isAuthenticated) return;
     fetchUserTripsApi().then((trips) => {
       if (Array.isArray(trips) && trips.length > 0) {
-        const mappedPlans: ItineraryPlan[] = trips.map((t: any) => ({
-          id: `trip-${t.id}`,
-          title: t.name,
-          destination: t.end_location,
-          finalDestination: t.end_location,
-          preferredDestination: t.end_location,
-          fromLocation: t.start_location || 'Current City',
-          toLocation: t.end_location,
-          transportMode: t.transport_mode || 'flight',
-          dates: `${t.start_date} to ${t.end_date}`,
-          startDate: t.start_date,
-          endDate: t.end_date,
-          dailyStartTime: t.start_time ? String(t.start_time).slice(0, 5) : '09:00',
-          budget: Number(t.budget) || 25000,
-          friendsCount: Number(t.member_count) || 1,
-          travelType: 'SOLO_OR_GROUP',
-          weatherType: detectWeatherType(t.end_location),
-          isSaved: true,
-          inviteCode: t.invite_code,
-          budgetSplit: {
-            totalBudget: Number(t.budget) || 25000,
-            perPerson: Math.round((Number(t.budget) || 25000) / (Number(t.member_count) || 1)),
-            stayTotal: Math.round((Number(t.budget) || 25000) * 0.4),
-            foodTotal: Math.round((Number(t.budget) || 25000) * 0.3),
-            activitiesTotal: Math.round((Number(t.budget) || 25000) * 0.2),
-            contingency: Math.round((Number(t.budget) || 25000) * 0.1)
-          },
-          exhaustion: {
-            score: 45,
-            level: 'OPTIMAL',
-            color: '#10b981',
-            details: 'Calculated from backend telemetry'
-          },
-          dayPlans: [],
-          schedule: [],
-          members: []
-        }));
+        const mappedPlans: ItineraryPlan[] = trips.map((t: any) => {
+          const fallback = generateCustomItinerary({
+            fromLocation: t.start_location || 'New Delhi',
+            toLocation: t.end_location || 'Goa',
+            dailyStartTime: t.start_time ? String(t.start_time).slice(0, 5) : '09:00 AM',
+            friendsCount: Number(t.member_count) || 1,
+            budget: Number(t.budget) || 25000,
+            transportMode: (t.transport_mode || 'flight').toLowerCase() as any,
+            weatherType: detectWeatherType(t.end_location || 'Goa'),
+            startDate: t.start_date
+          });
+          return {
+            ...fallback,
+            id: `trip-${t.id}`,
+            title: t.name,
+            destination: t.end_location,
+            finalDestination: t.end_location,
+            preferredDestination: t.end_location,
+            fromLocation: t.start_location || 'New Delhi',
+            toLocation: t.end_location,
+            transportMode: (t.transport_mode || 'flight').toLowerCase() as any,
+            dates: `${t.start_date} to ${t.end_date}`,
+            startDate: t.start_date,
+            endDate: t.end_date,
+            dailyStartTime: t.start_time ? String(t.start_time).slice(0, 5) : '09:00 AM',
+            budget: Number(t.budget) || 25000,
+            friendsCount: Number(t.member_count) || 1,
+            weatherType: detectWeatherType(t.end_location || 'Goa'),
+            isSaved: true,
+            inviteCode: t.invite_code
+          };
+        });
 
         setSavedPlans((prev) => {
           const combined = [...prev];
@@ -313,10 +308,10 @@ export default function App() {
         name: plan.title,
         startDate: plan.startDate,
         startTime: plan.dailyStartTime,
-        startLocation: plan.startLocation || 'Current City',
-        endDate: plan.endDate,
+        startLocation: plan.startLocation || plan.fromLocation || 'Current City',
+        endDate: plan.endDate || plan.startDate,
         endTime: '20:00',
-        endLocation: plan.finalDestination || plan.destination,
+        endLocation: plan.finalDestination || plan.toLocation || plan.destination || 'Expedition Destination',
         budget: plan.budget,
         transportMode: plan.transportMode
       });

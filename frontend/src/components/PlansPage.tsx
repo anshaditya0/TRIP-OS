@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { AnimatePresence } from 'motion/react';
+import React, { useState, useEffect, Component, ErrorInfo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Compass, RefreshCw, AlertTriangle } from 'lucide-react';
 import { ItineraryPlan, TransportMode, WeatherType, MoodMeterConfig, TripMember, GroupDNA, UserProfile } from '../types';
 import { generateCustomItinerary, estimateDistanceKm, calculateExhaustion } from '../utils/planGenerator';
 import { DEFAULT_MOOD_METER } from './DynamicMoodMeter';
@@ -22,7 +23,72 @@ interface PlansPageProps {
   user?: UserProfile;
 }
 
-export const PlansPage: React.FC<PlansPageProps> = ({
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class PlansPageErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('PlansPage captured render error:', error, errorInfo);
+  }
+
+  handleReset = () => {
+    this.setState({ hasError: false, error: null });
+    window.location.reload();
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="w-full max-w-2xl mx-auto py-16 px-6">
+          <div className="glass-card p-10 text-center rounded-3xl border border-red-200/80 shadow-2xl space-y-5 bg-white/90 backdrop-blur-xl">
+            <div className="w-16 h-16 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mx-auto shadow-inner">
+              <AlertTriangle className="w-8 h-8" />
+            </div>
+            <div className="space-y-2">
+              <span className="px-3 py-1 rounded-full bg-red-100 text-red-700 text-[10px] font-mono font-black uppercase tracking-widest">
+                SYSTEM RECOVERY SHIELD
+              </span>
+              <h3 className="text-xl font-black uppercase text-slate-900 tracking-tight">
+                EXPEDITION PLANNER RECOVERED
+              </h3>
+              <p className="text-xs font-mono text-slate-600 leading-relaxed max-w-md mx-auto">
+                A transient rendering irregularity occurred. We protected your session from going blank. Click below to re-initialize your trip planner cleanly.
+              </p>
+            </div>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={this.handleReset}
+                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-neutral-950 hover:bg-black text-white text-xs font-mono font-black uppercase tracking-wider shadow-xl transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <RefreshCw className="w-4 h-4" />
+                RESET & RESTART PLANNER
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+const PlansPageInternal: React.FC<PlansPageProps> = ({
   currentPlan,
   onPlanCreated,
   onSavePlan,
@@ -667,3 +733,9 @@ export const PlansPage: React.FC<PlansPageProps> = ({
     </div>
   );
 };
+
+export const PlansPage: React.FC<PlansPageProps> = (props) => (
+  <PlansPageErrorBoundary>
+    <PlansPageInternal {...props} />
+  </PlansPageErrorBoundary>
+);

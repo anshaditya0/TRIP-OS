@@ -26,10 +26,12 @@ export const StepRoute: React.FC<StepRouteProps> = ({
   toLocation,
   selectedDate,
   durationDays,
+  dailyStartTime = '09:00 AM',
   onChangeFrom,
   onChangeTo,
   onChangeDate,
   onChangeDuration,
+  onChangeDailyStartTime,
   onNext,
 }) => {
   const distanceKm = estimateDistanceKm(fromLocation || 'New Delhi', toLocation || 'Goa');

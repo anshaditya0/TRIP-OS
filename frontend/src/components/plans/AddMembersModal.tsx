@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, UserPlus, Copy, Check, Share2, QrCode, 
-  ShieldCheck, Clock, X, Sparkles, AlertCircle, UserCheck, Trash2
+  ShieldCheck, Clock, X, Sparkles, AlertCircle, UserCheck, Trash2, Plus
 } from 'lucide-react';
 import { TripMember, FriendUser } from '../../types';
 import { fetchFriendsApi } from '../../services/api';
