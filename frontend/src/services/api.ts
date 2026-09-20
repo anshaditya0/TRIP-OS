@@ -10,8 +10,8 @@ function getApiBaseUrl(): string {
   let base = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL)
     ? (import.meta.env.VITE_API_BASE_URL as string).replace(/\/$/, '')
     : (typeof window !== 'undefined' && window.location.origin
-        ? '/api'
-        : 'http://localhost:5000/api');
+      ? '/api'
+      : 'http://localhost:5000/api');
 
   if (base.startsWith('http') && !base.endsWith('/api')) {
     base = `${base}/api`;
@@ -222,8 +222,8 @@ export async function getOfflinePackApi(tripId: number | string): Promise<ApiOff
       const survivalProtocol = Array.isArray(raw.sosGuide)
         ? raw.sosGuide
         : Array.isArray(raw.survivalProtocol)
-        ? raw.survivalProtocol
-        : [
+          ? raw.survivalProtocol
+          : [
             'Designate a fixed physical checkpoint if group members get separated.',
             'Dial 112 for medical emergency (works even without SIM on satellite SOS roaming).',
             'During sudden landslides, halt at nearest army post or concrete shelter.',
@@ -232,13 +232,13 @@ export async function getOfflinePackApi(tripId: number | string): Promise<ApiOff
 
       const offlineWaypoints = Array.isArray(raw.waypoints)
         ? raw.waypoints.map((w: any) => ({
-            name: w.name || w.location || 'Emergency Route Station',
-            type: w.type || 'WAYPOINT',
-            contact: w.recommendedStartTime ? `Departs: ${w.recommendedStartTime}` : (w.contact || '112')
-          }))
+          name: w.name || w.location || 'Emergency Route Station',
+          type: w.type || 'WAYPOINT',
+          contact: w.recommendedStartTime ? `Departs: ${w.recommendedStartTime}` : (w.contact || '112')
+        }))
         : Array.isArray(raw.offlineWaypoints)
-        ? raw.offlineWaypoints
-        : [
+          ? raw.offlineWaypoints
+          : [
             { name: 'District Civil Hospital', type: 'MEDICAL', contact: '01902-252344' },
             { name: 'Sub-Divisional Police Station', type: 'SECURITY', contact: '112' }
           ];
@@ -594,7 +594,7 @@ export async function updateProfileApi(profile: { name?: string; username?: stri
       const data = await res.json();
       if (res.ok) return data;
     }
-  } catch {}
+  } catch { }
 
   return {
     success: true,
@@ -1120,7 +1120,7 @@ export async function loginApi(params: { email?: string; username?: string; iden
 
       return {
         success: true,
-        message: 'Authentication verified! Launching Trip OS...',
+        message: 'Verified! Launching Trip OS...',
         accessToken: authData.session?.access_token,
         user: {
           id: authData.user.id,
@@ -1136,8 +1136,8 @@ export async function loginApi(params: { email?: string; username?: string; iden
     if (authError && (authError.message.includes('Invalid login credentials') || authError.message.includes('Email not confirmed'))) {
       return {
         success: false,
-        message: authError.message.includes('Email not confirmed') 
-          ? 'Please verify your email address to log in, or check spam.' 
+        message: authError.message.includes('Email not confirmed')
+          ? 'Please verify your email address to log in, or check spam.'
           : 'Invalid email or password. Please check your credentials.',
         error: authError.message
       };
