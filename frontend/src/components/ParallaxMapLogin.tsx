@@ -22,7 +22,7 @@ import {
 import { loginApi, registerApi, forgotPasswordApi, resetPasswordWithOtpApi } from '../services/api';
 
 interface ParallaxMapLoginProps {
-  onLogin: (email: string, name: string) => void;
+  onLogin: (email: string, name: string, username?: string, avatarUrl?: string, bio?: string) => void;
   defaultEmail?: string;
 }
 
@@ -138,8 +138,11 @@ export const ParallaxMapLogin: React.FC<ParallaxMapLoginProps> = ({ onLogin, def
           setSuccessMessage('Authentication verified! Launching Trip OS...');
           const resolvedName = result.user?.profile?.name || result.user?.user_metadata?.name || result.user?.name || 'EXPLORER';
           const resolvedEmail = result.user?.email || (cleanIdentifier.includes('@') ? cleanIdentifier : `${cleanIdentifier}@tripos.world`);
+          const resolvedUsername = result.user?.profile?.username || result.user?.user_metadata?.username || result.user?.username;
+          const resolvedAvatar = result.user?.profile?.avatar_url || result.user?.user_metadata?.avatar_url || result.user?.avatar_url;
+          const resolvedBio = result.user?.profile?.bio || result.user?.bio;
           setTimeout(() => {
-            onLogin(resolvedEmail, resolvedName);
+            onLogin(resolvedEmail, resolvedName, resolvedUsername, resolvedAvatar, resolvedBio);
           }, 600);
         } else {
           setErrorMessage(result.message || 'Invalid credentials or connection error');
@@ -176,12 +179,14 @@ export const ParallaxMapLogin: React.FC<ParallaxMapLoginProps> = ({ onLogin, def
           setSuccessMessage('Account created successfully! Logging you in...');
           const loginResult = await loginApi({ identifier: cleanUsername, email: cleanIdentifier, password });
           if (loginResult.success) {
+            const resolvedUsername = loginResult.user?.username || cleanUsername;
+            const resolvedAvatar = loginResult.user?.avatar_url;
             setTimeout(() => {
-              onLogin(cleanIdentifier, cleanName);
+              onLogin(cleanIdentifier, cleanName, resolvedUsername, resolvedAvatar);
             }, 600);
           } else {
             setTimeout(() => {
-              onLogin(cleanIdentifier, cleanName);
+              onLogin(cleanIdentifier, cleanName, cleanUsername);
             }, 800);
           }
         } else {

@@ -385,13 +385,17 @@ export default function App() {
   // Weather configuration mapping
   const activeWeatherConfig = WEATHER_CONFIGS[weatherTheme];
 
-  const handleLogin = (email: string, name: string) => {
+  const handleLogin = (email: string, name: string, username?: string, avatarUrl?: string, bio?: string) => {
     const cleanName = (name.trim() || 'EXPLORER').toUpperCase();
     const cleanEmail = email.trim() || `${cleanName.toLowerCase().replace(/\s+/g, '')}@tripos.world`;
     const updatedUser: UserProfile = {
       ...user,
       name: cleanName,
       email: cleanEmail,
+      username: username || user.username,
+      avatar: avatarUrl || user.avatar,
+      avatar_url: avatarUrl || user.avatar_url,
+      bio: bio || user.bio,
       documents: [],
       expenses: []
     };
