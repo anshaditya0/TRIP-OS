@@ -1,12 +1,18 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { CheckCircle2, Sparkles, ArrowRight, ArrowLeft, MapPin, Users, Wallet, Plane, Train, Car, Bike, Activity, Calendar } from 'lucide-react';
-import { TransportMode, MoodMeterConfig } from '../../types';
+import { CheckCircle2, Sparkles, ArrowRight, ArrowLeft, MapPin, Users, Wallet, Plane, Train, Car, Bike, Activity, Calendar, Clock, Dna, ThumbsUp } from 'lucide-react';
+import { TransportMode, MoodMeterConfig, TripMember, GroupDNA } from '../../types';
 import { estimateDistanceKm, calculateExhaustion } from '../../utils/planGenerator';
 
 interface StepReviewProps {
   fromLocation: string;
   toLocation: string;
+  preferredDestination?: string;
+  finalDestination?: string;
+  destinationReason?: string;
+  dailyStartTime?: string;
+  members?: TripMember[];
+  groupDNA?: GroupDNA;
   friendsCount: number;
   budget: number;
   transportMode: TransportMode;
@@ -22,6 +28,12 @@ interface StepReviewProps {
 export const StepReview: React.FC<StepReviewProps> = ({
   fromLocation,
   toLocation,
+  preferredDestination,
+  finalDestination,
+  destinationReason,
+  dailyStartTime = '09:00 AM',
+  members = [],
+  groupDNA,
   friendsCount,
   budget,
   transportMode,
@@ -84,6 +96,50 @@ export const StepReview: React.FC<StepReviewProps> = ({
       </div>
 
       <div className="space-y-6">
+        {/* GroupDNA Destination Verification Banner */}
+        <div className="p-5 rounded-3xl bg-gradient-to-r from-slate-900 via-slate-800 to-neutral-900 text-white shadow-md space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Dna className="w-4 h-4 text-orange-400" />
+                <span className="text-[10px] font-mono text-orange-400 font-black uppercase tracking-wider">
+                  GROUPDNA™ FINALIZED DESTINATION
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[9px] font-mono font-bold flex items-center gap-1">
+                  <CheckCircle2 className="w-2.5 h-2.5" />
+                  LEADER APPROVED
+                </span>
+              </div>
+              <h3 className="text-xl font-black uppercase text-white tracking-tight">
+                {finalDestination || toLocation}
+              </h3>
+              {preferredDestination && preferredDestination !== (finalDestination || toLocation) && (
+                <p className="text-xs text-slate-300 font-medium">
+                  User Provisional Preference: <strong>{preferredDestination}</strong> ➔ Calibrated by GroupDNA consensus.
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="p-3 rounded-2xl bg-white/10 border border-white/10 text-right">
+                <span className="text-[9px] font-mono text-slate-400 font-bold uppercase block">
+                  DAILY VISIT START TIME
+                </span>
+                <span className="text-sm font-black font-mono text-orange-400">
+                  {dailyStartTime}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {destinationReason && (
+            <p className="text-xs text-slate-300 font-medium border-t border-slate-700/60 pt-2 flex items-center gap-1.5">
+              <ThumbsUp className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>{destinationReason}</span>
+            </p>
+          )}
+        </div>
+
         {/* Visual Summary Bento */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1: Route */}
@@ -93,7 +149,7 @@ export const StepReview: React.FC<StepReviewProps> = ({
               <span>EXPEDITION CORRIDOR</span>
             </div>
             <p className="text-base font-black text-slate-900 uppercase truncate">
-              {fromLocation} ➔ {toLocation}
+              {fromLocation} ➔ {finalDestination || toLocation}
             </p>
             <p className="text-xs font-mono text-slate-500 mt-1">
               Estimated: ~{distanceKm.toLocaleString()} KM

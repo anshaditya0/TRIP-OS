@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { MapPin, ArrowRight, Compass, Route, Calendar } from 'lucide-react';
+import { MapPin, ArrowRight, Compass, Route, Calendar, Clock, Sparkles } from 'lucide-react';
 import { estimateDistanceKm } from '../../utils/planGenerator';
 import { DateDropboxCalendar } from './DateDropboxCalendar';
 
@@ -9,10 +9,12 @@ interface StepRouteProps {
   toLocation: string;
   selectedDate: string;
   durationDays: number;
+  dailyStartTime?: string;
   onChangeFrom: (from: string) => void;
   onChangeTo: (to: string) => void;
   onChangeDate: (date: string) => void;
   onChangeDuration: (days: number) => void;
+  onChangeDailyStartTime?: (time: string) => void;
   onNext: () => void;
 }
 
@@ -105,11 +107,20 @@ export const StepRoute: React.FC<StepRouteProps> = ({
             </div>
           </div>
 
-          {/* To Location */}
+          {/* To Location / Provisional Recommendation */}
           <div className="space-y-2">
-            <label className="block text-xs font-black uppercase tracking-wider text-slate-800">
-              DESTINATION (TARGET EXPEDITION)
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-black uppercase tracking-wider text-slate-800">
+                RECOMMENDED DESTINATION (PREFERENCE)
+              </label>
+              <span className="text-[9px] font-mono font-black uppercase text-orange-600 bg-orange-100 px-2 py-0.5 rounded-md flex items-center gap-1">
+                <Sparkles className="w-2.5 h-2.5" />
+                GROUPDNA FINALIZED
+              </span>
+            </div>
+            <p className="text-[10px] font-semibold text-slate-500 uppercase">
+              Provisional preference: finalized once squad GroupDNA is calculated.
+            </p>
             <div className="relative">
               <MapPin className="w-4 h-4 text-emerald-600 absolute left-3.5 top-3.5" />
               <input
@@ -143,6 +154,39 @@ export const StepRoute: React.FC<StepRouteProps> = ({
                 ))}
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Requirement 5: Time to Begin Visits Each Day */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white/80 border border-slate-200/80 space-y-3 shadow-2xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+            <label className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+              <Clock className="w-4 h-4 text-orange-600" />
+              <span>TIME TO BEGIN VISITS EACH DAY</span>
+            </label>
+            <span className="text-[10px] font-mono font-bold text-slate-500 uppercase">
+              DAILY ITINERARY DEPARTURE ANCHOR
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {['08:00 AM', '08:30 AM', '09:00 AM', '09:30 AM', '10:00 AM', '10:30 AM'].map((timePreset) => {
+              const isSelected = (dailyStartTime || '09:00 AM') === timePreset;
+              return (
+                <button
+                  key={timePreset}
+                  type="button"
+                  onClick={() => onChangeDailyStartTime?.(timePreset)}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-mono font-black uppercase tracking-wider transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-slate-900 text-white shadow-xs scale-[1.02]'
+                      : 'bg-white text-slate-700 hover:bg-orange-50 hover:text-orange-900 border border-slate-200'
+                  }`}
+                >
+                  {timePreset}
+                </button>
+              );
+            })}
           </div>
         </div>
 

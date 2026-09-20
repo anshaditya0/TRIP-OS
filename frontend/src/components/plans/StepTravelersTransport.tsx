@@ -1,11 +1,13 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Users, Plane, Train, Car, Bike, ArrowRight, ArrowLeft, ShieldCheck } from 'lucide-react';
-import { TransportMode } from '../../types';
+import { Users, Plane, Train, Car, Bike, ArrowRight, ArrowLeft, ShieldCheck, UserPlus, Check, Clock, QrCode } from 'lucide-react';
+import { TransportMode, TripMember } from '../../types';
 
 interface StepTravelersTransportProps {
   friendsCount: number;
   transportMode: TransportMode;
+  members?: TripMember[];
+  onOpenAddMembersModal?: () => void;
   onChangeFriendsCount: (count: number) => void;
   onChangeTransportMode: (mode: TransportMode) => void;
   onNext: () => void;
@@ -61,6 +63,8 @@ const TRANSPORT_OPTIONS: {
 export const StepTravelersTransport: React.FC<StepTravelersTransportProps> = ({
   friendsCount,
   transportMode,
+  members = [],
+  onOpenAddMembersModal,
   onChangeFriendsCount,
   onChangeTransportMode,
   onNext,
@@ -86,15 +90,70 @@ export const StepTravelersTransport: React.FC<StepTravelersTransportProps> = ({
           WHO IS GOING & HOW WILL YOU TRAVEL?
         </h2>
         <p className="text-xs font-bold text-neutral-500 uppercase tracking-wide mt-1">
-          SELECT YOUR CREW SIZE AND PREFERRED TRANSIT CARRIER
+          INVITE CREW MEMBERS, GATHER COLLABORATORS & SELECT TRANSIT MODE
         </p>
       </div>
 
       <div className="space-y-8">
+        {/* Requirement 1: Add Members rectangular button with circular edges */}
+        <div className="p-5 rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-lg space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <span className="text-[10px] font-mono text-orange-400 font-black uppercase tracking-wider block">
+                COLLABORATIVE TRIP SQUAD
+              </span>
+              <h3 className="text-lg font-black uppercase tracking-tight text-white">
+                EXPEDITION MEMBERS & INVITE PORTAL
+              </h3>
+              <p className="text-xs text-slate-300 font-medium">
+                Share your invite link so all members can join and log their 9 Vibe Preferences for GroupDNA.
+              </p>
+            </div>
+
+            {/* Rectangular button with circular edges (rounded-2xl) */}
+            <motion.button
+              id="btn-add-members-rectangular"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              type="button"
+              onClick={onOpenAddMembersModal}
+              className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all active:scale-95 border border-orange-400/40 shrink-0"
+            >
+              <UserPlus className="w-4 h-4 text-white" />
+              <span>ADD MEMBERS</span>
+              <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-mono font-bold">
+                {members.length} MEMBERS
+              </span>
+            </motion.button>
+          </div>
+
+          {/* Member Avatars Pills Strip */}
+          <div className="pt-3 border-t border-slate-700/80 flex flex-wrap items-center gap-2">
+            {members.map((m) => (
+              <div
+                key={m.id}
+                className="px-3 py-1.5 rounded-xl bg-slate-800/90 border border-slate-700 flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-200"
+              >
+                <span className="w-5 h-5 rounded-full bg-orange-500/30 text-orange-300 text-[10px] flex items-center justify-center font-mono">
+                  {m.name.slice(0, 1)}
+                </span>
+                <span>{m.name}</span>
+                {m.role === 'LEADER' ? (
+                  <span className="text-[8px] px-1.5 py-0.2 rounded-full bg-orange-500 text-white">LEADER</span>
+                ) : m.preferencesSubmitted ? (
+                  <Check className="w-3 h-3 text-emerald-400" />
+                ) : (
+                  <Clock className="w-3 h-3 text-amber-400" />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Section A: Number of Travelers */}
         <div className="space-y-3">
           <label className="block text-xs font-black uppercase tracking-wider text-slate-800">
-            GROUP SIZE
+            TOTAL GROUP SIZE / TRAVELERS COUNT
           </label>
 
           <div className="flex flex-col sm:flex-row items-center gap-4">

@@ -13,6 +13,7 @@ import { ExhaustionMeter } from '../ExhaustionMeter';
 import { TiltCard } from '../TiltCard';
 import { MagneticButton } from '../MagneticButton';
 import WhatIfSimulator from './WhatIfSimulator';
+import { VenueWhatIfModal } from './VenueWhatIfModal';
 import { 
   evaluateTripBadgeApi, claimBadgeApi, getOfflinePackApi, 
   simulateDisruptionApi, getDriveFolderApi, createDriveFolderApi, 
@@ -46,7 +47,13 @@ export const FinalItineraryView: React.FC<FinalItineraryViewProps> = ({
   const [selectedDayNumber, setSelectedDayNumber] = useState<number>(1);
   const [shareNotice, setShareNotice] = useState<string | null>(null);
 
+  // Venue-Level What-If Simulation State (Requirement 5)
+  const [isVenueWhatIfOpen, setIsVenueWhatIfOpen] = useState<boolean>(false);
+  const [selectedVenueIndex, setSelectedVenueIndex] = useState<number>(0);
+  const [customSchedules, setCustomSchedules] = useState<Record<number, any[]>>({});
+
   const activeDay = plan.dayPlans.find(d => d.dayNumber === selectedDayNumber) || plan.dayPlans[0];
+  const currentSchedule = customSchedules[selectedDayNumber] || activeDay.schedule;
 
   const formatDayDate = (dayNumber: number) => {
     if (!plan.startDate) return null;
@@ -569,10 +576,19 @@ Generated via Yatra Trip Itinerary Planner
 
             {/* Timeline Schedule */}
             <div className="space-y-3">
-              <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">
-                CHRONOLOGICAL TIMELINE & ACTIVITY STOPS
-              </h4>
-              {activeDay.schedule.map((item, idx) => (
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">
+                  CHRONOLOGICAL TIMELINE & ACTIVITY STOPS
+                </h4>
+                {customSchedules[selectedDayNumber] && (
+                  <span className="text-[10px] font-mono text-orange-600 bg-orange-100 px-2.5 py-0.5 rounded-full font-bold uppercase flex items-center gap-1">
+                    <Zap className="w-2.5 h-2.5 fill-orange-600" />
+                    VENUE WHAT-IF SHIFT ACTIVE
+                  </span>
+                )}
+              </div>
+
+              {currentSchedule.map((item, idx) => (
                 <div
                   key={idx}
                   className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 p-4 rounded-2xl bg-white/90 border border-slate-200/80 shadow-2xs hover:border-slate-300 transition-all"
@@ -596,26 +612,42 @@ Generated via Yatra Trip Itinerary Planner
                     </div>
                   </div>
 
-                  <div className="flex items-center sm:flex-col sm:items-end justify-between sm:justify-start gap-1 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-                    {item.cost > 0 ? (
-                      <span className="text-xs font-black text-slate-900 font-mono">
-                        ₹{item.cost.toLocaleString()}
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-black text-emerald-700 font-mono">
-                        FREE / COMPLIMENTARY
-                      </span>
-                    )}
+                  <div className="flex items-center sm:flex-col sm:items-end justify-between sm:justify-start gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                    <div className="flex items-center gap-2">
+                      {item.cost > 0 ? (
+                        <span className="text-xs font-black text-slate-900 font-mono">
+                          ₹{item.cost.toLocaleString()}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-black text-emerald-700 font-mono">
+                          FREE
+                        </span>
+                      )}
 
-                    <a
-                      href={item.googleMapsUrl || `https://maps.google.com/?q=${encodeURIComponent(item.location + ' ' + plan.toLocation)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[10px] font-bold text-slate-500 hover:text-slate-900 uppercase flex items-center gap-0.5"
+                      <a
+                        href={item.googleMapsUrl || `https://maps.google.com/?q=${encodeURIComponent(item.location + ' ' + plan.toLocation)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] font-bold text-slate-500 hover:text-slate-900 uppercase flex items-center gap-0.5"
+                      >
+                        <span>MAP</span>
+                        <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    </div>
+
+                    {/* Requirement 5: Venue What-If simulation button on each venue */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedVenueIndex(idx);
+                        setIsVenueWhatIfOpen(true);
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 text-amber-900 border border-amber-200 text-[10px] font-mono font-black uppercase tracking-wider flex items-center gap-1 shadow-2xs transition-all cursor-pointer active:scale-95"
+                      title="Simulate staying longer at this specific venue"
                     >
-                      <span>MAP</span>
-                      <ExternalLink className="w-2.5 h-2.5" />
-                    </a>
+                      <Zap className="w-2.5 h-2.5 text-amber-600 fill-amber-600" />
+                      <span>WHAT-IF: VISIT LONGER</span>
+                    </button>
                   </div>
                 </div>
               ))}
@@ -1141,6 +1173,22 @@ Generated via Yatra Trip Itinerary Planner
           </div>
         )}
       </AnimatePresence>
+
+      {/* Requirement 5: Venue-Level What-If Simulator Modal */}
+      <VenueWhatIfModal
+        isOpen={isVenueWhatIfOpen}
+        onClose={() => setIsVenueWhatIfOpen(false)}
+        dayNumber={selectedDayNumber}
+        venueIndex={selectedVenueIndex}
+        daySchedule={currentSchedule}
+        destination={plan.toLocation}
+        onApplyScheduleShift={(newSched) => {
+          setCustomSchedules(prev => ({
+            ...prev,
+            [selectedDayNumber]: newSched
+          }));
+        }}
+      />
     </motion.div>
   );
 };

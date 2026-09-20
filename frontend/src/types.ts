@@ -160,12 +160,20 @@ export interface ItineraryPlan {
   title: string;
   fromLocation: string;
   toLocation: string;
+  preferredDestination?: string;
+  finalDestination?: string;
+  dailyStartTime?: string; // e.g. "09:00 AM"
   friendsCount: number;
   budget: number;
   transportMode: TransportMode;
   preferredActivities: string[];
   weatherType: WeatherType;
   moodMeter?: MoodMeterConfig;
+  groupDNA?: GroupDNA;
+  destinationReason?: string;
+  isDestinationApproved?: boolean;
+  members?: TripMember[];
+  inviteCode?: string;
   exhaustion: ExhaustionData;
   dayPlans: DayPlan[];
   topSights: SightItem[];
@@ -234,6 +242,64 @@ export interface JourneyCollectible {
   description: string;
 }
 
+export interface TripMember {
+  id: string;
+  name: string;
+  email?: string;
+  role: 'LEADER' | 'MEMBER';
+  status: 'APPROVED' | 'PENDING' | 'REJECTED';
+  avatar?: string;
+  preferencesSubmitted: boolean;
+  preferences?: MoodMeterConfig;
+  joinedAt?: string;
+}
+
+export type GroupDNA = MoodMeterConfig;
+
+export interface DestinationRecommendation {
+  id: string | number;
+  name: string;
+  state: string;
+  country?: string;
+  score: number;
+  status: 'RECOMMENDED' | 'REJECTED';
+  why: string[];
+  warnings: string[];
+  rejectionReasons?: string[];
+  matchedConstraints?: string[];
+  componentScores?: Record<string, number>;
+  description?: string;
+  matchesPreferred?: boolean;
+  matchVerdict?: string;
+}
+
+export interface AppNotification {
+  id: string;
+  type: 'TRIP_UPCOMING' | 'BUDGET_ALERT' | 'JOIN_REQUEST' | 'PREFERENCES_SUBMITTED' | 'DESTINATION_RECOMMENDATION' | 'DISRUPTION_ALERT';
+  title: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
+  actionLabel?: string;
+  actionTab?: string;
+  tripId?: string;
+  memberId?: string;
+  meta?: any;
+}
+
+export interface VenueWhatIfResult {
+  extraMinutes: number;
+  originalTime: string;
+  newDepartureTime: string;
+  daylightImpact: string;
+  isCurfewRisk: boolean;
+  curfewWarning?: string;
+  dinnerShiftMinutes: number;
+  affectedStopsCount: number;
+  suggestedAction: string;
+  shiftedSchedule: DayScheduleItem[];
+}
+
 export interface UserProfile {
   name: string;
   email: string;
@@ -247,3 +313,4 @@ export interface UserProfile {
   expenses: PersonalExpense[];
   collectibles?: JourneyCollectible[];
 }
+

@@ -1,9 +1,9 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { MapPin, Users, Wallet, Sparkles, CheckCircle2, FileText, Calendar } from 'lucide-react';
+import { MapPin, Users, Wallet, Sparkles, CheckCircle2, FileText, Calendar, Dna } from 'lucide-react';
 import { DateDropboxCalendar } from './DateDropboxCalendar';
 
-export type WizardStep = 1 | 2 | 3 | 4 | 5 | 6; // 1: Route, 2: Travelers, 3: Budget & Vibe, 4: Interests, 5: Review, 6: Final Itinerary
+export type WizardStep = 1 | 2 | 3 | 4 | 5 | 6; // 1: Route, 2: Members & Transit, 3: GroupDNA & Final Destination, 4: Budget & Style, 5: Review, 6: Final Itinerary
 
 interface PlanStepperHeaderProps {
   currentStep: WizardStep;
@@ -16,11 +16,11 @@ interface PlanStepperHeaderProps {
 }
 
 const STEPS_CONFIG = [
-  { step: 1 as WizardStep, label: 'ROUTE', title: 'Origin & Destination', icon: MapPin },
-  { step: 2 as WizardStep, label: 'TRAVELERS', title: 'Party & Transit', icon: Users },
-  { step: 3 as WizardStep, label: 'BUDGET & VIBE', title: 'Budget & Style', icon: Wallet },
-  { step: 4 as WizardStep, label: 'INTERESTS', title: 'Top Experiences', icon: Sparkles },
-  { step: 5 as WizardStep, label: 'REVIEW', title: 'Trip Brief', icon: CheckCircle2 },
+  { step: 1 as WizardStep, label: 'ROUTE', title: 'Origin & Preferred Hub', icon: MapPin },
+  { step: 2 as WizardStep, label: 'MEMBERS', title: 'Squad & Transit', icon: Users },
+  { step: 3 as WizardStep, label: 'GROUPDNA™', title: '9 Vibe Preferences & Destination', icon: Dna },
+  { step: 4 as WizardStep, label: 'BUDGET', title: 'Budget & Interests', icon: Wallet },
+  { step: 5 as WizardStep, label: 'REVIEW', title: 'Trip Brief & Validation', icon: CheckCircle2 },
   { step: 6 as WizardStep, label: 'ITINERARY', title: 'Final Itinerary', icon: FileText },
 ];
 

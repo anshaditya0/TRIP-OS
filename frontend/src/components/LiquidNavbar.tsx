@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Home, Compass, Bookmark, User, MapPin, Sparkles, Navigation } from 'lucide-react';
+import { Home, Compass, Bookmark, User, MapPin, Sparkles, Navigation, Bell } from 'lucide-react';
 import { UserProfile } from '../types';
 import { TiltCard } from './TiltCard';
 
@@ -11,6 +11,8 @@ interface LiquidNavbarProps {
   onSelectTab: (tab: NavTab) => void;
   user: UserProfile;
   savedCount: number;
+  unreadNotificationsCount?: number;
+  onOpenNotifications?: () => void;
 }
 
 export const LiquidNavbar: React.FC<LiquidNavbarProps> = ({
@@ -18,6 +20,8 @@ export const LiquidNavbar: React.FC<LiquidNavbarProps> = ({
   onSelectTab,
   user,
   savedCount,
+  unreadNotificationsCount = 3,
+  onOpenNotifications,
 }) => {
   const tabs = [
     { id: 'home' as NavTab, label: 'HOME', icon: Home, badge: null },
@@ -84,7 +88,7 @@ export const LiquidNavbar: React.FC<LiquidNavbarProps> = ({
             </div>
           </button>
 
-          {/* Navigation Links (HOME, PLANS, SAVES) */}
+          {/* Navigation Links (HOME, PLANS, SAVES, NOTIFICATIONS) */}
           <nav className="space-y-1.5">
             {tabs.filter(t => t.id !== 'profile').map((tab) => {
               const Icon = tab.icon;
@@ -130,6 +134,28 @@ export const LiquidNavbar: React.FC<LiquidNavbarProps> = ({
                 </motion.button>
               );
             })}
+
+            {/* Requirement 1 & 3: Sidebar Notifications Button with identical design, typography & theme */}
+            <motion.button
+              id="sidebar-notifications-btn"
+              whileHover={{ x: 6, scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={onOpenNotifications}
+              className="relative w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer text-slate-600 hover:text-slate-900 hover:bg-white/80 hover:shadow-2xs"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-1.5 rounded-lg bg-orange-100/70 text-orange-700">
+                  <Bell className="w-4 h-4" />
+                </div>
+                <span>NOTIFICATIONS</span>
+              </div>
+
+              {unreadNotificationsCount > 0 && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black tracking-wider bg-orange-500 text-white shadow-xs">
+                  {unreadNotificationsCount}
+                </span>
+              )}
+            </motion.button>
           </nav>
         </div>
 
@@ -201,6 +227,23 @@ export const LiquidNavbar: React.FC<LiquidNavbarProps> = ({
               </motion.button>
             );
           })}
+
+          {/* Mobile Notifications Trigger */}
+          <motion.button
+            whileTap={{ scale: 0.85 }}
+            onClick={onOpenNotifications}
+            className="relative flex flex-col items-center justify-center py-1 px-2.5 sm:px-3.5 rounded-full cursor-pointer transition-transform min-w-[58px]"
+          >
+            <div className="text-slate-600">
+              <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
+            </div>
+            <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider mt-0.5 text-slate-600 whitespace-nowrap">
+              NOTIFS
+            </span>
+            {unreadNotificationsCount > 0 && (
+              <span className="absolute top-1 right-2 sm:right-3 w-2 h-2 rounded-full bg-orange-500 ring-2 ring-white"></span>
+            )}
+          </motion.button>
         </motion.nav>
       </div>
     </>

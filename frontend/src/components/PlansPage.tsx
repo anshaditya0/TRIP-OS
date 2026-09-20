@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence } from 'motion/react';
-import { ItineraryPlan, TransportMode, WeatherType, MoodMeterConfig } from '../types';
+import { ItineraryPlan, TransportMode, WeatherType, MoodMeterConfig, TripMember, GroupDNA } from '../types';
 import { generateCustomItinerary, estimateDistanceKm, calculateExhaustion } from '../utils/planGenerator';
 import { DEFAULT_MOOD_METER } from './DynamicMoodMeter';
 import { PlanStepperHeader, WizardStep } from './plans/PlanStepperHeader';
 import { StepRoute } from './plans/StepRoute';
 import { StepTravelersTransport } from './plans/StepTravelersTransport';
+import { StepGroupDNA } from './plans/StepGroupDNA';
 import { StepBudgetVibe } from './plans/StepBudgetVibe';
-import { StepActivities } from './plans/StepActivities';
 import { StepReview } from './plans/StepReview';
 import { FinalItineraryView } from './plans/FinalItineraryView';
+import { AddMembersModal } from './plans/AddMembersModal';
 import { createTripApi } from '../services/api';
 
 interface PlansPageProps {
@@ -41,7 +42,57 @@ export const PlansPage: React.FC<PlansPageProps> = ({
   };
 
   const [fromLocation, setFromLocation] = useState(currentPlan?.fromLocation || 'New Delhi');
+  
+  // Requirement 1 & 2: destination filled during creation is provisional recommendation/preference
   const [toLocation, setToLocation] = useState(initialDestination || currentPlan?.toLocation || 'Goa Coastline');
+  const [preferredDestination, setPreferredDestination] = useState(initialDestination || currentPlan?.preferredDestination || toLocation);
+  const [finalDestination, setFinalDestination] = useState(currentPlan?.finalDestination || toLocation);
+  const [destinationReason, setDestinationReason] = useState(currentPlan?.destinationReason || 'Calibrated and approved according to squad GroupDNA');
+
+  // Requirement 5: time to begin the visit each day
+  const [dailyStartTime, setDailyStartTime] = useState<string>(currentPlan?.dailyStartTime || '09:00 AM');
+
+  // Requirement 1: Members and collaborative squad
+  const [inviteCode] = useState<string>(() => currentPlan?.inviteCode || `EXP-${toLocation.slice(0, 3).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`);
+  const [isAddMembersModalOpen, setIsAddMembersModalOpen] = useState(false);
+  const [members, setMembers] = useState<TripMember[]>(() => currentPlan?.members || [
+    {
+      id: 'leader-1',
+      name: 'Sparsh Raj (You)',
+      email: 'sparsh@tripos.app',
+      role: 'LEADER',
+      status: 'APPROVED',
+      preferencesSubmitted: true,
+      preferences: currentPlan?.moodMeter || DEFAULT_MOOD_METER
+    },
+    {
+      id: 'member-2',
+      name: 'Aanya Sharma',
+      email: 'aanya@tripos.app',
+      role: 'MEMBER',
+      status: 'APPROVED',
+      preferencesSubmitted: false,
+    },
+    {
+      id: 'member-3',
+      name: 'Rohan Verma',
+      email: 'rohan@tripos.app',
+      role: 'MEMBER',
+      status: 'APPROVED',
+      preferencesSubmitted: false,
+    },
+    {
+      id: 'member-4',
+      name: 'Kabir Mehta',
+      email: 'kabir@tripos.app',
+      role: 'MEMBER',
+      status: 'PENDING',
+      preferencesSubmitted: false,
+    }
+  ]);
+
+  const [groupDNA, setGroupDNA] = useState<GroupDNA | null>(currentPlan?.groupDNA || null);
+
   const [friendsCount, setFriendsCount] = useState(currentPlan?.friendsCount || 3);
   const [budget, setBudget] = useState(currentPlan?.budget || 45000);
   const [transportMode, setTransportMode] = useState<TransportMode>(currentPlan?.transportMode || 'flight');
@@ -58,6 +109,8 @@ export const PlansPage: React.FC<PlansPageProps> = ({
   useEffect(() => {
     if (initialDestination) {
       setToLocation(initialDestination);
+      setPreferredDestination(initialDestination);
+      setFinalDestination(initialDestination);
       if (!currentPlan || !currentPlan.toLocation.toLowerCase().includes(initialDestination.toLowerCase())) {
         setCurrentStep(1);
       }
@@ -69,6 +122,11 @@ export const PlansPage: React.FC<PlansPageProps> = ({
     if (currentPlan) {
       setFromLocation(currentPlan.fromLocation);
       setToLocation(currentPlan.toLocation);
+      setPreferredDestination(currentPlan.preferredDestination || currentPlan.toLocation);
+      setFinalDestination(currentPlan.finalDestination || currentPlan.toLocation);
+      if (currentPlan.dailyStartTime) setDailyStartTime(currentPlan.dailyStartTime);
+      if (currentPlan.members) setMembers(currentPlan.members);
+      if (currentPlan.groupDNA) setGroupDNA(currentPlan.groupDNA);
       setFriendsCount(currentPlan.friendsCount);
       setBudget(currentPlan.budget);
       setTransportMode(currentPlan.transportMode);
@@ -87,15 +145,37 @@ export const PlansPage: React.FC<PlansPageProps> = ({
     }
   }, [currentPlan?.id]);
 
-  // Live exhaustion projection
-  const liveDistanceKm = estimateDistanceKm(fromLocation || 'New Delhi', toLocation || 'Goa');
-  const liveExhaustionProjection = calculateExhaustion(liveDistanceKm, transportMode, selectedActivities, moodMeter);
-
-  const toggleActivity = (activityId: string) => {
-    setSelectedActivities((prev) =>
-      prev.includes(activityId) ? prev.filter((id) => id !== activityId) : [...prev, activityId]
-    );
+  // Member Management Handlers
+  const handleAddMember = (name: string, email?: string) => {
+    const newMember: TripMember = {
+      id: `member-${Date.now()}`,
+      name,
+      email,
+      role: 'MEMBER',
+      status: 'APPROVED',
+      preferencesSubmitted: false
+    };
+    setMembers(prev => [...prev, newMember]);
+    setFriendsCount(prev => prev + 1);
   };
+
+  const handleApproveMember = (memberId: string) => {
+    setMembers(prev => prev.map(m => m.id === memberId ? { ...m, status: 'APPROVED' } : m));
+  };
+
+  const handleRemoveMember = (memberId: string) => {
+    setMembers(prev => prev.filter(m => m.id !== memberId));
+    setFriendsCount(prev => Math.max(1, prev - 1));
+  };
+
+  const handleUpdateMemberPreferences = (memberId: string, prefs: MoodMeterConfig) => {
+    setMembers(prev => prev.map(m => m.id === memberId ? { ...m, preferences: prefs, preferencesSubmitted: true } : m));
+  };
+
+  // Live exhaustion projection
+  const targetForDist = finalDestination || toLocation || 'Goa';
+  const liveDistanceKm = estimateDistanceKm(fromLocation || 'New Delhi', targetForDist);
+  const liveExhaustionProjection = calculateExhaustion(liveDistanceKm, transportMode, selectedActivities, groupDNA || moodMeter);
 
   // Handler to Add a Buffer Day in Final Itinerary
   const handleAddBufferDay = () => {
@@ -256,12 +336,12 @@ export const PlansPage: React.FC<PlansPageProps> = ({
     }
   };
 
-  // Execute Itinerary Generation
+  // Execute Itinerary Generation (Requirement 4: occurs only AFTER destination is finalized)
   const handleGeneratePlan = async () => {
     setIsGenerating(true);
 
     const safeFrom = fromLocation.trim() || 'New Delhi';
-    const safeTo = toLocation.trim() || 'Goa';
+    const targetDestination = (finalDestination || toLocation).trim() || 'Goa';
     const safeFriends = Math.max(1, friendsCount);
     const safeBudget = Math.max(5000, budget);
 
@@ -275,11 +355,13 @@ export const PlansPage: React.FC<PlansPageProps> = ({
       const endDateStr = isNaN(endD.getTime()) ? selectedDate : endD.toISOString().split('T')[0];
 
       const backendTrip = await createTripApi({
-        name: `${safeTo.toUpperCase()} EXPEDITION`,
+        name: `${targetDestination.toUpperCase()} EXPEDITION`,
         startDate: selectedDate,
+        startTime: dailyStartTime,
         startLocation: safeFrom,
         endDate: endDateStr,
-        endLocation: safeTo,
+        endTime: '20:00',
+        endLocation: targetDestination,
         budget: safeBudget,
         transportMode: transportMode.toUpperCase()
       });
@@ -296,12 +378,14 @@ export const PlansPage: React.FC<PlansPageProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fromLocation: safeFrom,
-          toLocation: safeTo,
+          toLocation: targetDestination,
+          preferredDestination: toLocation,
+          dailyStartTime,
           friendsCount: safeFriends,
           budget: safeBudget,
           transportMode,
           preferredActivities: selectedActivities,
-          moodMeter,
+          moodMeter: groupDNA || moodMeter,
           startDate: selectedDate,
           durationDays: durationDays
         })
@@ -311,13 +395,16 @@ export const PlansPage: React.FC<PlansPageProps> = ({
       if (data && data.success && data.plan) {
         const fallbackPlan = generateCustomItinerary({
           fromLocation: safeFrom,
-          toLocation: safeTo,
+          toLocation: targetDestination,
+          preferredDestination: toLocation,
+          finalDestination: targetDestination,
+          dailyStartTime,
           friendsCount: safeFriends,
           budget: safeBudget,
           transportMode,
           preferredActivities: selectedActivities,
           weatherType,
-          moodMeter,
+          moodMeter: groupDNA || moodMeter,
           startDate: selectedDate,
           durationDays: durationDays
         });
@@ -325,7 +412,15 @@ export const PlansPage: React.FC<PlansPageProps> = ({
         const mergedPlan: ItineraryPlan = {
           ...fallbackPlan,
           id: String(backendTripId),
-          moodMeter,
+          moodMeter: groupDNA || moodMeter,
+          groupDNA: groupDNA || undefined,
+          members,
+          inviteCode,
+          dailyStartTime,
+          preferredDestination: toLocation,
+          finalDestination: targetDestination,
+          destinationReason,
+          isDestinationApproved: true,
           startDate: selectedDate,
           durationDays: durationDays,
           title: data.plan.title || fallbackPlan.title,
@@ -334,20 +429,20 @@ export const PlansPage: React.FC<PlansPageProps> = ({
             id: `sight-ai-${idx}`,
             lat: fallbackPlan.destinationCoords.lat + (idx * 0.015 - 0.02),
             lng: fallbackPlan.destinationCoords.lng + (idx * 0.018 - 0.015),
-            googleMapsUrl: `https://maps.google.com/?q=${encodeURIComponent(s.name + ' ' + safeTo)}`
+            googleMapsUrl: `https://maps.google.com/?q=${encodeURIComponent(s.name + ' ' + targetDestination)}`
           })) : fallbackPlan.topSights,
           diningHighlights: data.plan.diningHighlights && data.plan.diningHighlights.length > 0 ? data.plan.diningHighlights.map((d: any, idx: number) => ({
             ...d,
             id: `dine-ai-${idx}`,
-            googleMapsUrl: `https://maps.google.com/?q=${encodeURIComponent(d.name + ' ' + safeTo)}`
+            googleMapsUrl: `https://maps.google.com/?q=${encodeURIComponent(d.name + ' ' + targetDestination)}`
           })) : fallbackPlan.diningHighlights,
           popularStays: data.plan.popularStays && data.plan.popularStays.length > 0 ? data.plan.popularStays.map((h: any, idx: number) => ({
             ...h,
             id: `stay-ai-${idx}`,
             lat: fallbackPlan.destinationCoords.lat + (idx * -0.012 + 0.01),
             lng: fallbackPlan.destinationCoords.lng + (idx * 0.014 - 0.01),
-            bookingLink: `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(h.name || safeTo)}`,
-            googleMapsUrl: `https://maps.google.com/?q=${encodeURIComponent(h.name + ' ' + safeTo)}`
+            bookingLink: `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(h.name || targetDestination)}`,
+            googleMapsUrl: `https://maps.google.com/?q=${encodeURIComponent(h.name + ' ' + targetDestination)}`
           })) : fallbackPlan.popularStays,
           dayPlans: data.plan.dayPlans && data.plan.dayPlans.length > 0 ? data.plan.dayPlans.map((d: any, dIdx: number) => ({
             ...d,
@@ -371,17 +466,28 @@ export const PlansPage: React.FC<PlansPageProps> = ({
       const newPlan = {
         ...generateCustomItinerary({
           fromLocation: safeFrom,
-          toLocation: safeTo,
+          toLocation: targetDestination,
+          preferredDestination: toLocation,
+          finalDestination: targetDestination,
+          dailyStartTime,
           friendsCount: safeFriends,
           budget: safeBudget,
           transportMode,
           preferredActivities: selectedActivities,
           weatherType,
-          moodMeter,
+          moodMeter: groupDNA || moodMeter,
           startDate: selectedDate,
           durationDays: durationDays
         }),
-        id: String(backendTripId)
+        id: String(backendTripId),
+        dailyStartTime,
+        preferredDestination: toLocation,
+        finalDestination: targetDestination,
+        destinationReason,
+        isDestinationApproved: true,
+        groupDNA: groupDNA || undefined,
+        members,
+        inviteCode
       };
 
       onPlanCreated(newPlan);
@@ -405,7 +511,7 @@ export const PlansPage: React.FC<PlansPageProps> = ({
 
       {/* 2. Step-by-Step Pages Animation Container */}
       <AnimatePresence mode="wait">
-        {/* PAGE 1: ROUTE & DESTINATION & DROPBOX CALENDAR */}
+        {/* PAGE 1: ROUTE & PROVISIONAL DESTINATION & CALENDAR & DAILY START TIME */}
         {currentStep === 1 && (
           <StepRoute
             key="step-route"
@@ -413,20 +519,27 @@ export const PlansPage: React.FC<PlansPageProps> = ({
             toLocation={toLocation}
             selectedDate={selectedDate}
             durationDays={durationDays}
+            dailyStartTime={dailyStartTime}
             onChangeFrom={setFromLocation}
-            onChangeTo={setToLocation}
+            onChangeTo={(to) => {
+              setToLocation(to);
+              setPreferredDestination(to);
+            }}
             onChangeDate={setSelectedDate}
             onChangeDuration={setDurationDays}
+            onChangeDailyStartTime={setDailyStartTime}
             onNext={() => setCurrentStep(2)}
           />
         )}
 
-        {/* PAGE 2: PARTY & TRANSIT */}
+        {/* PAGE 2: PARTY & TRANSIT & ADD MEMBERS RECTANGULAR BUTTON */}
         {currentStep === 2 && (
           <StepTravelersTransport
             key="step-travelers"
             friendsCount={friendsCount}
             transportMode={transportMode}
+            members={members}
+            onOpenAddMembersModal={() => setIsAddMembersModalOpen(true)}
             onChangeFriendsCount={setFriendsCount}
             onChangeTransportMode={setTransportMode}
             onNext={() => setCurrentStep(3)}
@@ -434,43 +547,58 @@ export const PlansPage: React.FC<PlansPageProps> = ({
           />
         )}
 
-        {/* PAGE 3: BUDGET & VIBE */}
+        {/* PAGE 3: GROUPDNA & 9 PREFERENCES & DESTINATION RECOMMENDATION & LEADER APPROVAL */}
         {currentStep === 3 && (
-          <StepBudgetVibe
-            key="step-budget"
-            budget={budget}
-            friendsCount={friendsCount}
-            moodMeter={moodMeter}
-            onChangeBudget={setBudget}
-            onChangeMoodMeter={setMoodMeter}
-            projectedExhaustion={liveExhaustionProjection}
-            onNext={() => setCurrentStep(4)}
+          <StepGroupDNA
+            key="step-group-dna"
+            tripId={currentPlan?.id || 'new-trip'}
+            preferredDestination={preferredDestination || toLocation}
+            members={members}
+            onUpdateMemberPreferences={handleUpdateMemberPreferences}
+            onFinalizeDestination={(finalDest, reason, dna) => {
+              setFinalDestination(finalDest);
+              setDestinationReason(reason);
+              setGroupDNA(dna);
+              setToLocation(finalDest);
+              setCurrentStep(4);
+            }}
+            onOpenAddMembersModal={() => setIsAddMembersModalOpen(true)}
             onBack={() => setCurrentStep(2)}
           />
         )}
 
-        {/* PAGE 4: HIGHLIGHT INTERESTS */}
+        {/* PAGE 4: BUDGET ALLOCATION & PACING */}
         {currentStep === 4 && (
-          <StepActivities
-            key="step-activities"
-            selectedActivities={selectedActivities}
-            onToggleActivity={toggleActivity}
+          <StepBudgetVibe
+            key="step-budget"
+            budget={budget}
+            friendsCount={friendsCount}
+            moodMeter={groupDNA || moodMeter}
+            onChangeBudget={setBudget}
+            onChangeMoodMeter={setMoodMeter}
+            projectedExhaustion={liveExhaustionProjection}
             onNext={() => setCurrentStep(5)}
             onBack={() => setCurrentStep(3)}
           />
         )}
 
-        {/* PAGE 5: REVIEW TRIP BRIEF */}
+        {/* PAGE 5: REVIEW TRIP BRIEF & VERIFICATION */}
         {currentStep === 5 && (
           <StepReview
             key="step-review"
             fromLocation={fromLocation}
             toLocation={toLocation}
+            preferredDestination={preferredDestination}
+            finalDestination={finalDestination}
+            destinationReason={destinationReason}
+            dailyStartTime={dailyStartTime}
+            members={members}
+            groupDNA={groupDNA || undefined}
             friendsCount={friendsCount}
             budget={budget}
             transportMode={transportMode}
             selectedActivities={selectedActivities}
-            moodMeter={moodMeter}
+            moodMeter={groupDNA || moodMeter}
             isGenerating={isGenerating}
             selectedDate={selectedDate}
             durationDays={durationDays}
@@ -489,6 +617,8 @@ export const PlansPage: React.FC<PlansPageProps> = ({
             onNewPlan={() => {
               setFromLocation('New Delhi');
               setToLocation('Goa Coastline');
+              setPreferredDestination('Goa Coastline');
+              setFinalDestination('Goa Coastline');
               setFriendsCount(3);
               setBudget(45000);
               setCurrentStep(1);
@@ -500,6 +630,22 @@ export const PlansPage: React.FC<PlansPageProps> = ({
           />
         )}
       </AnimatePresence>
+
+      {/* Add Members Modal (Requirement 1 & 2) */}
+      <AddMembersModal
+        isOpen={isAddMembersModalOpen}
+        onClose={() => setIsAddMembersModalOpen(false)}
+        tripName={`${(finalDestination || toLocation).toUpperCase()} EXPEDITION`}
+        inviteCode={inviteCode}
+        members={members}
+        onAddMember={handleAddMember}
+        onApproveMember={handleApproveMember}
+        onRemoveMember={handleRemoveMember}
+        onSelectMemberToEditPreferences={() => {
+          setIsAddMembersModalOpen(false);
+          setCurrentStep(3);
+        }}
+      />
     </div>
   );
 };

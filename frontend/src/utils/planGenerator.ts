@@ -6,6 +6,9 @@ import {
 export interface GenerateParams {
   fromLocation: string;
   toLocation: string;
+  preferredDestination?: string;
+  finalDestination?: string;
+  dailyStartTime?: string;
   friendsCount: number;
   budget: number;
   transportMode: TransportMode;
@@ -1130,6 +1133,10 @@ export function generateCustomItinerary(params: GenerateParams): ItineraryPlan {
     createdAt: 'JUST CREATED',
     isSaved: false,
     startDate: params.startDate,
-    durationDays: params.durationDays || 3
+    durationDays: params.durationDays || 3,
+    dailyStartTime: params.dailyStartTime || '09:00 AM',
+    preferredDestination: params.preferredDestination || toLocation,
+    finalDestination: params.finalDestination || toLocation
   };
 }
+

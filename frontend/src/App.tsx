@@ -32,6 +32,9 @@ import { DisasterAlertModal } from './components/DisasterAlertModal';
 import { DisasterAlertsFeed } from './components/DisasterAlertsFeed';
 import { OpeningSplash } from './components/OpeningSplash';
 import { MultilingualGreeting } from './components/MultilingualGreeting';
+import { NotificationsModal } from './components/NotificationsModal';
+import { AppNotification } from './types';
+import { removeStoredToken } from './services/api';
 
 const PAGE_HEADER_CONFIGS: Record<NavTab, { title: string; subtitle: string }> = {
   home: {
@@ -140,6 +143,49 @@ export default function App() {
     );
   };
 
+  // Requirement 1 & 3: Mission telemetry notifications state
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState<boolean>(false);
+  const [notifications, setNotifications] = useState<AppNotification[]>([
+    {
+      id: 'notif-1',
+      type: 'TRIP_UPCOMING',
+      title: 'UPCOMING EXPEDITION IN 7 DAYS',
+      message: 'Goa Coastline Expedition begins next Saturday. 28°C sunny telemetry projected. Offline emergency dossier is ready.',
+      timestamp: '2 hours ago',
+      read: false,
+      actionLabel: 'VIEW TRIP',
+      actionTab: 'plans'
+    },
+    {
+      id: 'notif-2',
+      type: 'JOIN_REQUEST',
+      title: 'KABIR REQUESTED TO JOIN TRIP',
+      message: 'Kabir Mehta entered invite code EXP-GOA-7829. Leader approval required before GroupDNA calculation.',
+      timestamp: '3 hours ago',
+      read: false,
+      tripId: 'plan-1',
+      memberId: 'member-4'
+    },
+    {
+      id: 'notif-3',
+      type: 'PREFERENCES_SUBMITTED',
+      title: 'GROUPDNA VIBE UPDATE',
+      message: '3 of 4 squad members logged their 9 Vibe Preferences. Ready to calculate collective vibe.',
+      timestamp: '5 hours ago',
+      read: false,
+      actionLabel: 'OPEN DNA',
+      actionTab: 'plans'
+    },
+    {
+      id: 'notif-4',
+      type: 'BUDGET_ALERT',
+      title: 'BUDGET TELEMETRY OPTIMAL',
+      message: '₹36,900 of ₹45,000 budget remaining. Daily burn rate is ₹3,850/person — healthy buffer.',
+      timestamp: 'Yesterday',
+      read: true
+    }
+  ]);
+
   const handleStartNewPlan = () => {
     setPlannerDestination('');
     setCurrentPlan(null);
@@ -173,6 +219,7 @@ export default function App() {
     try {
       localStorage.removeItem(SESSION_KEY);
       localStorage.removeItem('tripos_user_session');
+      removeStoredToken();
     } catch (e) {
       console.warn('Error clearing session', e);
     }
@@ -292,6 +339,8 @@ export default function App() {
           onSelectTab={(tab) => setCurrentTab(tab)}
           user={user}
           savedCount={savedPlans.length}
+          unreadNotificationsCount={notifications.filter(n => !n.read).length}
+          onOpenNotifications={() => setIsNotificationsOpen(true)}
         />
 
         {/* Primary Main Content Area (offset on desktop for PC side panel) */}
@@ -609,6 +658,25 @@ export default function App() {
         onSubmitAlert={handleNewDisasterAlert}
         defaultReporterName={user.name}
       />
+
+      {/* Requirement 1 & 3: Mission Telemetry Notifications Modal */}
+      <NotificationsModal
+        isOpen={isNotificationsOpen}
+        onClose={() => setIsNotificationsOpen(false)}
+        notifications={notifications}
+        onMarkAsRead={(id) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))}
+        onMarkAllAsRead={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}
+        onApproveMember={(tripId, memberId) => {
+          setNotifications(prev => prev.map(n => n.memberId === memberId ? { 
+            ...n, 
+            read: true, 
+            title: 'MEMBER JOIN APPROVED',
+            message: 'Member has been approved and added to your expedition roster! GroupDNA calibrated.' 
+          } : n));
+        }}
+        onNavigateToTab={(tab) => setCurrentTab(tab as NavTab)}
+      />
     </div>
   );
 }
+
