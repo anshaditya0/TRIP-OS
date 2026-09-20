@@ -3,7 +3,7 @@
  * Connects frontend directly with the production Node/Express + PostgreSQL + Supabase backend.
  */
 import { ALL_49_INDIAN_DESTINATIONS } from '../data/all49Destinations';
-import { FriendUser, FriendRequestItem } from '../types';
+import { FriendUser, FriendRequestItem, TripInvitation } from '../types';
 
 function getApiBaseUrl(): string {
   let base = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL)
@@ -545,6 +545,79 @@ export async function removeFriendApi(friendId: string) {
   }
 }
 
+export async function updateProfileApi(profile: { name?: string; username?: string; avatar_url?: string; bio?: string }) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/profile`, {
+      method: 'PATCH',
+      headers: DEFAULT_AUTH_HEADER,
+      body: JSON.stringify(profile)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to update profile');
+    return data;
+  } catch (err: any) {
+    console.warn('[TRIP//OS API] Update profile notice:', err);
+    throw err;
+  }
+}
+
+export async function searchUsersApi(q: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/users/search?q=${encodeURIComponent(q)}`, {
+      headers: DEFAULT_AUTH_HEADER
+    });
+    if (!res.ok) return { users: [] };
+    return await res.json();
+  } catch {
+    return { users: [] };
+  }
+}
+
+export async function fetchTripInvitationsApi(): Promise<{ invitations: TripInvitation[] }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/trips/invitations`, {
+      headers: DEFAULT_AUTH_HEADER
+    });
+    if (!res.ok) return { invitations: [] };
+    return await res.json();
+  } catch (err) {
+    console.warn('[TRIP//OS API] Fetch trip invitations notice:', err);
+    return { invitations: [] };
+  }
+}
+
+export async function respondTripInvitationApi(invitationId: number, action: 'ACCEPT' | 'DECLINE') {
+  try {
+    const res = await fetch(`${API_BASE_URL}/trips/invitations/${invitationId}/respond`, {
+      method: 'PATCH',
+      headers: DEFAULT_AUTH_HEADER,
+      body: JSON.stringify({ action })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to respond to invitation');
+    return data;
+  } catch (err: any) {
+    console.warn('[TRIP//OS API] Respond invitation notice:', err);
+    throw err;
+  }
+}
+
+export async function createTripInvitationApi(tripId: string | number, invitee: { email?: string; username?: string; friendId?: string }) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/trips/${tripId}/invitations`, {
+      method: 'POST',
+      headers: DEFAULT_AUTH_HEADER,
+      body: JSON.stringify(invitee)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to send trip invitation');
+    return data;
+  } catch (err: any) {
+    console.warn('[TRIP//OS API] Create trip invitation notice:', err);
+    throw err;
+  }
+}
+
 // 10. In-Memory GroupDNA Calculation Engine (Exact match with backend scoringEngine.js)
 export function calculateLocalGroupDNA(preferencesList: any[]): any {
   if (!preferencesList || preferencesList.length === 0) {
@@ -815,13 +888,15 @@ export interface ForgotPasswordResponse {
   error?: string;
 }
 
-export async function loginApi(params: { email: string; password: string }): Promise<AuthResponse> {
+export async function loginApi(params: { email?: string; username?: string; identifier?: string; password: string }): Promise<AuthResponse> {
   try {
+    const identifier = (params.identifier || params.email || params.username || '').trim();
     const res = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: params.email.trim().toLowerCase(),
+        identifier,
+        email: identifier,
         password: params.password
       })
     });
@@ -852,7 +927,7 @@ export async function loginApi(params: { email: string; password: string }): Pro
   }
 }
 
-export async function registerApi(params: { name: string; email: string; password: string }): Promise<AuthResponse> {
+export async function registerApi(params: { name: string; email: string; password: string; username?: string; avatar_url?: string }): Promise<AuthResponse> {
   try {
     const res = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
@@ -860,6 +935,8 @@ export async function registerApi(params: { name: string; email: string; passwor
       body: JSON.stringify({
         name: params.name.trim(),
         email: params.email.trim().toLowerCase(),
+        username: params.username ? params.username.trim().toLowerCase().replace('@', '') : undefined,
+        avatar_url: params.avatar_url,
         password: params.password
       })
     });

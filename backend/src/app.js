@@ -13,10 +13,12 @@ const badgeRoutes = require("./routes/badgeRoutes");
 const friendRoutes = require("./routes/friendRoutes");
 const { runBadgeMigration } = require("./config/migrateBadges");
 const { runFriendsMigration } = require("./config/migrateFriends");
+const { runUserProfileAndInvitesMigration } = require("./config/migrateUserProfileAndInvites");
 
 // Run migrations asynchronously on startup
 runBadgeMigration().catch(console.warn);
 runFriendsMigration().catch(console.warn);
+runUserProfileAndInvitesMigration().catch(console.warn);
 
 const app = express();
 

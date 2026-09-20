@@ -77,42 +77,40 @@ const getFriends = async (req, res) => {
 };
 
 /**
- * Send a Friend Request by email or username
- */
 const sendFriendRequest = async (req, res) => {
     try {
         const senderId = req.user.id;
-        const { email, name } = req.body;
+        const { email, username, name } = req.body;
 
-        if (!email) {
-            return res.status(400).json({ error: "Friend email is required" });
+        const identifier = (email || username || '').trim().toLowerCase().replace('@', '');
+        if (!identifier) {
+            return res.status(400).json({ error: "Friend email or @username is required" });
         }
 
-        const cleanEmail = email.trim().toLowerCase();
-
         // Prevent adding yourself
-        if (cleanEmail === req.user.email?.toLowerCase()) {
+        if (identifier === req.user.email?.toLowerCase() || identifier === (req.user.user_metadata?.username || '').toLowerCase()) {
             return res.status(400).json({ error: "You cannot send a friend request to yourself" });
         }
 
         // Check if receiver exists in users table
         let receiverId;
         const userRes = await pool.query(
-            `SELECT id, name, email FROM users WHERE LOWER(email) = $1`,
-            [cleanEmail]
+            `SELECT id, name, email, username FROM users WHERE LOWER(email) = $1 OR LOWER(username) = $1 LIMIT 1`,
+            [identifier]
         );
 
         if (userRes.rows.length > 0) {
             receiverId = userRes.rows[0].id;
         } else {
-            // Create user placeholder so they can receive and accept later
+            // If it contains @, create email placeholder
+            const placeholderEmail = identifier.includes('@') ? identifier : `${identifier}@tripos.world`;
             receiverId = `usr_fr_${Date.now()}`;
             try {
                 await pool.query(
-                    `INSERT INTO users (id, name, email)
-                     VALUES ($1, $2, $3)
+                    `INSERT INTO users (id, name, email, username)
+                     VALUES ($1, $2, $3, $4)
                      ON CONFLICT (id) DO NOTHING`,
-                    [receiverId, name || cleanEmail.split('@')[0].toUpperCase(), cleanEmail]
+                    [receiverId, name || identifier.toUpperCase(), placeholderEmail, identifier.includes('@') ? null : identifier]
                 );
             } catch (uErr) {
                 logger.warn("Create placeholder user notice:", uErr.message);
@@ -248,13 +246,21 @@ const inviteFriendToTrip = async (req, res) => {
             return res.status(400).json({ error: "Valid friendId or friendEmail required" });
         }
 
-        // Add to trip_members with APPROVED status (direct invite by squad leader)
+        // Add to trip_members with PENDING status awaiting member confirmation
         await pool.query(
-            `INSERT INTO trip_members (trip_id, user_id, role, status, joined_via, approved_at)
-             VALUES ($1, $2, 'MEMBER', 'APPROVED', 'DIRECT_FRIEND_INVITE', NOW())
+            `INSERT INTO trip_members (trip_id, user_id, role, status, joined_via)
+             VALUES ($1, $2, 'MEMBER', 'PENDING', 'DIRECT_FRIEND_INVITE')
              ON CONFLICT (trip_id, user_id)
-             DO UPDATE SET status = 'APPROVED', approved_at = NOW()`,
+             DO NOTHING`,
             [trip.id, targetUserId]
+        );
+
+        // Also record in trip_invitations with PENDING status for member notification tray
+        await pool.query(
+            `INSERT INTO trip_invitations (trip_id, inviter_id, inviter_name, invitee_id, invitee_email, invite_code, status)
+             VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')
+             ON CONFLICT DO NOTHING`,
+            [trip.id, req.user.id, req.user.user_metadata?.name || req.user.name || "Trip Leader", targetUserId, friendEmail || null, trip.invite_code]
         );
 
         res.status(201).json({

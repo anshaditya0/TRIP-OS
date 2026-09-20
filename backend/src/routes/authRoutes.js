@@ -9,5 +9,7 @@ router.post("/login", authLimiter, authController.login);
 router.post("/forgot-password", authLimiter, authController.forgotPassword);
 router.post("/reset-password", authLimiter, authController.resetPasswordWithOtp);
 router.get("/me", authMiddleware, authController.getMe);
+router.patch("/profile", authMiddleware, authController.updateProfile);
+router.get("/users/search", authMiddleware, authController.searchUsers);
 
 module.exports = router;

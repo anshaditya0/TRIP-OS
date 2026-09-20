@@ -319,38 +319,45 @@ export const DynamicMoodMeter: React.FC<MoodMeterProps> = ({
                 </div>
               </div>
 
-              {/* Dynamic Fluid Bar with Anime.js Elastic Morphing */}
-              <div className="w-full space-y-2 mt-1">
-                <div className="w-full h-3 bg-neutral-100 rounded-full overflow-hidden p-0.5 border border-neutral-200/60 shadow-inner relative">
-                  <div
-                    ref={(el) => {
-                      barRefs.current[dim.key] = el;
-                    }}
-                    className={`h-full rounded-full bg-gradient-to-r ${dim.gradient} shadow-xs relative`}
-                    style={{ width: `${Math.max(4, value)}%`, willChange: 'width, transform' }}
-                  >
-                    {/* Glowing head indicator */}
-                    <div className="absolute right-0 top-0 bottom-0 w-2 rounded-full bg-white/80 shadow-xs" />
+              {/* Kinetic Slider Track with Visual Black Knob and Hidden Full-Coverage Range Input */}
+              <div className="w-full space-y-2 mt-2">
+                <div className="relative w-full py-1.5 flex items-center">
+                  {/* Base Track */}
+                  <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden relative border border-slate-200/50 shadow-inner">
+                    <div
+                      ref={(el) => {
+                        barRefs.current[dim.key] = el;
+                      }}
+                      className={`h-full rounded-full bg-gradient-to-r ${dim.gradient}`}
+                      style={{ width: `${Math.max(2, value)}%`, willChange: 'width' }}
+                    />
                   </div>
+
+                  {/* Kinetic Knob: Sleek Black Puck with Subtle Border & Shadow */}
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-neutral-950 border-2 border-white shadow-md pointer-events-none transition-all"
+                    style={{ left: `calc(${value}% - 8px)` }}
+                  />
+
+                  {/* Transparent Interactive Range Slider */}
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={value}
+                    onChange={(e) => handleSliderChange(dim.key, Number(e.target.value))}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    aria-label={dim.label}
+                  />
                 </div>
 
-                {/* Range Slider for Manual Tactile Tuning */}
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="1"
-                  value={value}
-                  onChange={(e) => handleSliderChange(dim.key, Number(e.target.value))}
-                  className="w-full accent-neutral-900 cursor-pointer h-1 bg-neutral-200 rounded-lg appearance-none"
-                />
-              </div>
-
-              {/* Bottom Micro Guide */}
-              <div className="flex justify-between text-[9px] font-mono-telemetry text-neutral-400 font-bold uppercase mt-1 px-0.5">
-                <span>0% MIN</span>
-                <span>50% MID</span>
-                <span>100% MAX</span>
+                {/* Bottom Micro Guide */}
+                <div className="flex justify-between text-[9px] font-mono-telemetry text-neutral-400 font-bold uppercase px-0.5 select-none">
+                  <span>0% MIN</span>
+                  <span>50% MID</span>
+                  <span>100% MAX</span>
+                </div>
               </div>
             </div>
           );

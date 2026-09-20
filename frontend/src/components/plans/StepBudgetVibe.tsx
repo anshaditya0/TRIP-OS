@@ -1,15 +1,14 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Wallet, Sparkles, ArrowRight, ArrowLeft, Sliders, ChevronDown, ChevronUp, Check } from 'lucide-react';
+import React from 'react';
+import { motion } from 'motion/react';
+import { Wallet, Sparkles, ArrowRight, ArrowLeft, Check } from 'lucide-react';
 import { MoodMeterConfig } from '../../types';
-import { DynamicMoodMeter } from '../DynamicMoodMeter';
 
 interface StepBudgetVibeProps {
   budget: number;
   friendsCount: number;
   moodMeter: MoodMeterConfig;
   onChangeBudget: (budget: number) => void;
-  onChangeMoodMeter: (mood: MoodMeterConfig) => void;
+  onChangeMoodMeter?: (mood: MoodMeterConfig) => void;
   projectedExhaustion?: { score: number };
   onNext: () => void;
   onBack: () => void;
@@ -22,113 +21,17 @@ const BUDGET_PRESETS = [
   { amount: 150000, label: 'ROYAL LUXURY', tier: 'HERITAGE/LUXE', sub: 'Palaces, 5-star chauffeurs & private suites' },
 ];
 
-export const VIBE_ARCHETYPES = [
-  {
-    id: 'zen',
-    title: 'ZEN & SCENIC LEISURE',
-    icon: '🍃',
-    desc: 'Unrushed morning tea, lush valleys, wellness, sunset viewpoints & low fatigue.',
-    mood: {
-      adventure: 25,
-      nature: 85,
-      food: 70,
-      photography: 65,
-      nightlife: 20,
-      relaxation: 95,
-      budgetSensitivity: 50,
-      walkingTolerance: 30,
-      crowdTolerance: 20
-    }
-  },
-  {
-    id: 'adventure',
-    title: 'HIKES & HIGH ADRENALINE',
-    icon: '🏔️',
-    desc: 'High physical stamina, ridge treks, river rapids, cliff views & dawn summits.',
-    mood: {
-      adventure: 90,
-      nature: 85,
-      food: 60,
-      photography: 75,
-      nightlife: 35,
-      relaxation: 30,
-      budgetSensitivity: 40,
-      walkingTolerance: 85,
-      crowdTolerance: 40
-    }
-  },
-  {
-    id: 'heritage',
-    title: 'ROYAL HERITAGE & CULTURE',
-    icon: '🏛️',
-    desc: 'Grand forts, ancient temples, artisan textile bazaars & historical chronicles.',
-    mood: {
-      adventure: 45,
-      nature: 55,
-      food: 75,
-      photography: 90,
-      nightlife: 30,
-      relaxation: 60,
-      budgetSensitivity: 50,
-      walkingTolerance: 60,
-      crowdTolerance: 65
-    }
-  },
-  {
-    id: 'coastal',
-    title: 'COASTAL & NIGHTLIFE VIBE',
-    icon: '🏖️',
-    desc: 'Golden beaches, waterfront shacks, water sports, live music & beach clubs.',
-    mood: {
-      adventure: 65,
-      nature: 70,
-      food: 80,
-      photography: 80,
-      nightlife: 90,
-      relaxation: 55,
-      budgetSensitivity: 45,
-      walkingTolerance: 45,
-      crowdTolerance: 75
-    }
-  },
-  {
-    id: 'foodie',
-    title: 'CULINARY & FLAVOR ODYSSEY',
-    icon: '🍲',
-    desc: 'Iconic street food gullies, secret heritage recipes, cafe hopping & spices.',
-    mood: {
-      adventure: 50,
-      nature: 45,
-      food: 95,
-      photography: 75,
-      nightlife: 65,
-      relaxation: 70,
-      budgetSensitivity: 45,
-      walkingTolerance: 60,
-      crowdTolerance: 70
-    }
-  }
-];
-
 export const StepBudgetVibe: React.FC<StepBudgetVibeProps> = ({
   budget,
   friendsCount,
-  moodMeter,
+  moodMeter: _moodMeter,
   onChangeBudget,
-  onChangeMoodMeter,
+  onChangeMoodMeter: _onChangeMoodMeter,
   projectedExhaustion,
   onNext,
   onBack,
 }) => {
-  const [activeVibeId, setActiveVibeId] = useState<string>('zen');
-  const [showAdvancedMood, setShowAdvancedMood] = useState(false);
-
   const perPersonCost = Math.round(budget / Math.max(1, friendsCount));
-
-  const handleSelectVibe = (archetype: typeof VIBE_ARCHETYPES[0]) => {
-    setActiveVibeId(archetype.id);
-    onChangeMoodMeter(archetype.mood);
-  };
 
   return (
     <motion.div
@@ -207,84 +110,69 @@ export const StepBudgetVibe: React.FC<StepBudgetVibeProps> = ({
           </div>
         </div>
 
-        {/* Section B: Travel Vibe Archetypes */}
+        {/* Section B: Automated Budget Category Allocation Breakdown */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <label className="block text-xs font-black uppercase tracking-wider text-slate-800">
-              SELECT TRAVEL VIBE & TEMPO
+            <label className="block text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-orange-500" />
+              <span>EXPEDITION BUDGET CATEGORY ALLOCATION</span>
             </label>
-            <span className="text-[10px] font-mono-telemetry text-slate-500 uppercase">
-              AUTO-CONFIGURES PACING & REST CYCLES
+            <span className="text-[10px] font-mono font-bold text-slate-500 uppercase">
+              BALANCED VIA SQUAD GROUPDNA
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {VIBE_ARCHETYPES.map((vibe) => {
-              const isSelected = activeVibeId === vibe.id;
-              return (
-                <button
-                  id={`vibe-card-${vibe.id}`}
-                  key={vibe.id}
-                  type="button"
-                  onClick={() => handleSelectVibe(vibe)}
-                  className={`p-4 rounded-2xl text-left transition-all cursor-pointer border flex flex-col justify-between ${
-                    isSelected
-                      ? 'bg-neutral-900 text-white border-neutral-900 shadow-md ring-2 ring-neutral-900 scale-[1.02]'
-                      : 'bg-white/80 text-slate-800 border-slate-200/80 hover:bg-white hover:border-slate-300 shadow-2xs'
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xl">{vibe.icon}</span>
-                      {isSelected && (
-                        <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center">
-                          <Check className="w-3 h-3" />
-                        </span>
-                      )}
-                    </div>
-                    <h4 className="text-xs font-black uppercase tracking-tight mb-1">
-                      {vibe.title}
-                    </h4>
-                    <p className={`text-[11px] leading-snug ${isSelected ? 'text-neutral-300' : 'text-neutral-500'}`}>
-                      {vibe.desc}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+            {[
+              { label: 'LODGING & STAYS', pct: 40, amount: Math.round(budget * 0.4), color: 'text-orange-600 bg-orange-50 border-orange-200' },
+              { label: 'TRANSIT & CABS', pct: 25, amount: Math.round(budget * 0.25), color: 'text-blue-600 bg-blue-50 border-blue-200' },
+              { label: 'DINING & CUISINE', pct: 20, amount: Math.round(budget * 0.2), color: 'text-amber-600 bg-amber-50 border-amber-200' },
+              { label: 'ACTIVITIES & TOURS', pct: 10, amount: Math.round(budget * 0.1), color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
+              { label: 'SAFETY BUFFER', pct: 5, amount: Math.round(budget * 0.05), color: 'text-purple-600 bg-purple-50 border-purple-200' },
+            ].map((cat) => (
+              <div
+                key={cat.label}
+                className={`p-3.5 rounded-2xl border flex flex-col justify-between shadow-2xs ${cat.color}`}
+              >
+                <div>
+                  <span className="text-[9px] font-mono-telemetry font-black block tracking-wider">
+                    {cat.label} ({cat.pct}%)
+                  </span>
+                  <p className="text-base font-black font-mono mt-1 text-slate-900">
+                    ₹{cat.amount.toLocaleString()}
+                  </p>
+                </div>
+                <span className="text-[9px] font-mono text-slate-500 mt-2 block">
+                  ₹{Math.round(cat.amount / Math.max(1, friendsCount)).toLocaleString()} / PERSON
+                </span>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Section C: Optional Advanced Mood Sliders Toggle */}
-        <div className="pt-2">
-          <button
-            type="button"
-            onClick={() => setShowAdvancedMood(!showAdvancedMood)}
-            className="w-full py-2.5 px-4 rounded-xl bg-white/70 hover:bg-white border border-slate-200/80 text-slate-700 text-xs font-bold uppercase tracking-wider flex items-center justify-between cursor-pointer transition-colors shadow-2xs"
-          >
-            <div className="flex items-center gap-2">
-              <Sliders className="w-4 h-4 text-orange-500" />
-              <span>CUSTOMIZE DETAILED BIOMETRICS & SENSORY SLIDERS (OPTIONAL)</span>
+        {/* Section C: GroupDNA Calibrated Pacing Confirmation */}
+        <div className="p-4 rounded-2xl bg-neutral-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center shrink-0 border border-orange-500/30">
+              <Check className="w-5 h-5" />
             </div>
-            {showAdvancedMood ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </button>
-
-          <AnimatePresence>
-            {showAdvancedMood && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden pt-3"
-              >
-                <DynamicMoodMeter
-                  config={moodMeter}
-                  onChange={onChangeMoodMeter}
-                  projectedExhaustion={projectedExhaustion}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
+            <div>
+              <span className="text-[10px] font-mono font-black uppercase text-orange-400 block tracking-widest">
+                GROUPDNA PACING APPLIED
+              </span>
+              <p className="text-xs font-bold text-slate-200 uppercase">
+                Endurance & vibe dimensions calibrated in Step 03 are actively driving itinerary pacing.
+              </p>
+            </div>
+          </div>
+          {projectedExhaustion && (
+            <div className="sm:text-right shrink-0">
+              <span className="text-[10px] font-mono text-slate-400 uppercase block">PROJECTED FATIGUE</span>
+              <span className="text-sm font-black font-mono text-emerald-400">
+                {projectedExhaustion.score}% OPTIMAL
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Navigation Actions */}

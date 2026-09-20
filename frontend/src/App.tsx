@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Navigation, Sparkles, LogOut, Compass, MapPin, Calendar, 
-  Users, Bookmark, ArrowRight, ShieldCheck, Heart, Plus 
+  Users, Bookmark, ArrowRight, ShieldCheck, Heart, Plus,
+  Check, X, Clock, Loader2, QrCode
 } from 'lucide-react';
 
 import { 
   DestinationCard, ItineraryPlan, ReviewItem, UserProfile, 
-  WeatherType, DigitalDocument, PersonalExpense, DisasterAlert 
+  WeatherType, DigitalDocument, PersonalExpense, DisasterAlert,
+  AppNotification, TripInvitation
 } from './types';
 import { 
   DEFAULT_USER_PROFILE, INITIAL_SAVED_PLANS, POPULAR_DESTINATIONS, 
@@ -34,8 +36,16 @@ import { OpeningSplash } from './components/OpeningSplash';
 import { MultilingualGreeting } from './components/MultilingualGreeting';
 import { NotificationsModal } from './components/NotificationsModal';
 import { FriendsPage } from './components/FriendsPage';
-import { AppNotification } from './types';
-import { removeStoredToken, createTripApi, fetchUserTripsApi, savePreferencesApi, fetchFriendsApi } from './services/api';
+import { 
+  removeStoredToken, 
+  createTripApi, 
+  fetchUserTripsApi, 
+  savePreferencesApi, 
+  fetchFriendsApi,
+  fetchTripInvitationsApi,
+  respondTripInvitationApi,
+  joinTripApi
+} from './services/api';
 
 const PAGE_HEADER_CONFIGS: Record<NavTab, { title: string; subtitle: string }> = {
   home: {
@@ -203,6 +213,157 @@ export default function App() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState<boolean>(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [pendingFriendsCount, setPendingFriendsCount] = useState<number>(0);
+
+  // Expedition Trip Invitations State (Requirement 1: Member POV invite delivery)
+  const [tripInvitations, setTripInvitations] = useState<TripInvitation[]>([]);
+  const [activeInvitationModal, setActiveInvitationModal] = useState<TripInvitation | null>(null);
+  const [urlJoinCode, setUrlJoinCode] = useState<string | null>(null);
+  const [isRespondingToInvite, setIsRespondingToInvite] = useState(false);
+
+  // Check URL params for join code (e.g. /join/EXP-XXX or ?join=EXP-XXX)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const codeParam = params.get('join') || params.get('invite') || params.get('code');
+      const pathMatch = window.location.pathname.match(/\/join\/([A-Za-z0-9_-]+)/);
+      const foundCode = codeParam || (pathMatch ? pathMatch[1] : null);
+      if (foundCode) {
+        setUrlJoinCode(foundCode.toUpperCase());
+      }
+    } catch {}
+  }, []);
+
+  // Poll & fetch pending trip invitations from backend for current member
+  const loadTripInvitations = async () => {
+    if (!isAuthenticated) return;
+    try {
+      const res = await fetchTripInvitationsApi();
+      if (res && Array.isArray(res.invitations)) {
+        const pending = res.invitations.filter((i: any) => i.status === 'PENDING');
+        setTripInvitations(pending);
+        if (pending.length > 0 && !activeInvitationModal) {
+          setActiveInvitationModal(pending[0]);
+        }
+      }
+    } catch (e) {
+      console.warn('Load invitations error:', e);
+    }
+  };
+
+  useEffect(() => {
+    loadTripInvitations();
+    const interval = setInterval(loadTripInvitations, 10000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
+
+  // Handle Member Accepting or Declining Direct Trip Invitation
+  const handleRespondToInvitation = async (invitation: TripInvitation, action: 'ACCEPT' | 'DECLINE') => {
+    setIsRespondingToInvite(true);
+    try {
+      await respondTripInvitationApi(invitation.id, action);
+      setTripInvitations(prev => prev.filter(i => i.id !== invitation.id));
+      setActiveInvitationModal(null);
+
+      if (action === 'ACCEPT') {
+        const dest = invitation.end_location || 'Goa';
+        const fallback = generateCustomItinerary({
+          fromLocation: invitation.start_location || 'Current City',
+          toLocation: dest,
+          dailyStartTime: '09:00 AM',
+          friendsCount: 2,
+          budget: invitation.budget || 25000,
+          transportMode: (invitation.transport_mode?.toLowerCase() as any) || 'flight',
+          weatherType: detectWeatherType(dest),
+          startDate: invitation.start_date
+        });
+        const joinedPlan: ItineraryPlan = {
+          ...fallback,
+          id: `trip-${invitation.trip_id}`,
+          title: invitation.trip_name || `${dest.toUpperCase()} EXPEDITION`,
+          destination: dest,
+          finalDestination: dest,
+          fromLocation: invitation.start_location || 'Current City',
+          toLocation: dest,
+          budget: invitation.budget || 25000,
+          inviteCode: invitation.invite_code,
+          isSaved: true
+        };
+        setCurrentPlan(joinedPlan);
+        setSavedPlans(prev => [joinedPlan, ...prev.filter(p => p.id !== joinedPlan.id)]);
+        setCurrentTab('plans');
+
+        setNotifications(prev => [
+          {
+            id: `notif-${Date.now()}`,
+            type: 'JOIN_REQUEST',
+            title: 'EXPEDITION INVITATION ACCEPTED',
+            message: `You joined ${invitation.trip_name || 'Expedition'}! Calibrate your 9 Vibe Preferences now.`,
+            timestamp: 'Just now',
+            read: false
+          },
+          ...prev
+        ]);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to respond to trip invitation.');
+    } finally {
+      setIsRespondingToInvite(false);
+    }
+  };
+
+  // Handle Joining Trip via URL Code
+  const handleAcceptUrlJoin = async () => {
+    if (!urlJoinCode) return;
+    setIsRespondingToInvite(true);
+    try {
+      const res = await joinTripApi(urlJoinCode);
+      const tripName = res.trip?.name || `Expedition (${urlJoinCode})`;
+      const dest = res.trip?.end_location || 'Goa';
+      const fallback = generateCustomItinerary({
+        fromLocation: res.trip?.start_location || 'Current City',
+        toLocation: dest,
+        dailyStartTime: '09:00 AM',
+        friendsCount: 2,
+        budget: 25000,
+        transportMode: 'flight',
+        weatherType: detectWeatherType(dest),
+        startDate: new Date().toISOString().split('T')[0]
+      });
+      const joinedPlan: ItineraryPlan = {
+        ...fallback,
+        id: `trip-${res.trip?.id || urlJoinCode}`,
+        title: tripName,
+        destination: dest,
+        finalDestination: dest,
+        inviteCode: urlJoinCode,
+        isSaved: true
+      };
+      setCurrentPlan(joinedPlan);
+      setSavedPlans(prev => [joinedPlan, ...prev.filter(p => p.id !== joinedPlan.id)]);
+      setCurrentTab('plans');
+      setUrlJoinCode(null);
+      // Clean query string
+      try {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } catch {}
+
+      setNotifications(prev => [
+        {
+          id: `notif-${Date.now()}`,
+          type: 'JOIN_REQUEST',
+          title: 'JOINED EXPEDITION SQUAD',
+          message: `Joined ${tripName} via invite link! Calibrate your 9 Vibe Preferences in Step 3.`,
+          timestamp: 'Just now',
+          read: false
+        },
+        ...prev
+      ]);
+    } catch (err: any) {
+      alert(err.message || 'Failed to join trip with invite code.');
+    } finally {
+      setIsRespondingToInvite(false);
+    }
+  };
 
   // Sync pending friend requests
   useEffect(() => {
@@ -782,6 +943,172 @@ export default function App() {
         }}
         onNavigateToTab={(tab) => setCurrentTab(tab as NavTab)}
       />
+
+      {/* MEMBER POV: INCOMING EXPEDITION INVITATION MODAL */}
+      <AnimatePresence>
+        {activeInvitationModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md">
+            <motion.div
+              initial={{ scale: 0.92, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.92, opacity: 0, y: 20 }}
+              className="w-full max-w-lg bg-white/95 rounded-3xl p-6 sm:p-8 border border-white/80 shadow-[0_25px_80px_rgba(0,0,0,0.35)] relative overflow-hidden"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between pb-4 border-b border-slate-200 mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-500 text-white flex items-center justify-center font-black shadow-md">
+                    <Compass className="w-6 h-6 animate-spin-slow" />
+                  </div>
+                  <div>
+                    <span className="px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-800 text-[10px] font-mono font-black uppercase tracking-wider">
+                      EXPEDITION INVITATION
+                    </span>
+                    <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 mt-0.5">
+                      YOU ARE INVITED TO JOIN!
+                    </h3>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveInvitationModal(null)}
+                  className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 cursor-pointer transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Trip details card */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3 mb-6">
+                <div>
+                  <span className="text-[10px] font-mono font-bold uppercase text-slate-400">EXPEDITION NAME</span>
+                  <h4 className="text-base sm:text-lg font-black uppercase text-slate-900">
+                    {activeInvitationModal.trip_name || 'EXPEDITION MISSION'}
+                  </h4>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-200/60">
+                  <div className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs font-mono font-bold flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-orange-500" />
+                    <span>{activeInvitationModal.start_location || 'Origin'} ➔ {activeInvitationModal.end_location || 'Destination'}</span>
+                  </div>
+
+                  {activeInvitationModal.start_date && (
+                    <div className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs font-mono font-bold flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-blue-500" />
+                      <span>{activeInvitationModal.start_date}</span>
+                    </div>
+                  )}
+
+                  {activeInvitationModal.invite_code && (
+                    <div className="px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-mono font-black flex items-center gap-1.5">
+                      <QrCode className="w-3.5 h-3.5 text-amber-600" />
+                      <span>CODE: {activeInvitationModal.invite_code}</span>
+                    </div>
+                  )}
+                </div>
+
+                <p className="text-xs font-medium text-slate-600 pt-1">
+                  Invited by <span className="font-bold text-slate-900">{activeInvitationModal.leader_name || activeInvitationModal.inviter_name || 'Squad Leader'}</span>. Join the squad to submit your 9 Vibe Preferences and calibrate GroupDNA!
+                </p>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  disabled={isRespondingToInvite}
+                  onClick={() => handleRespondToInvitation(activeInvitationModal, 'DECLINE')}
+                  className="flex-1 py-3 rounded-2xl border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-mono font-bold uppercase transition-colors cursor-pointer"
+                >
+                  DECLINE
+                </button>
+                <button
+                  type="button"
+                  disabled={isRespondingToInvite}
+                  onClick={() => handleRespondToInvitation(activeInvitationModal, 'ACCEPT')}
+                  className="flex-2 py-3 rounded-2xl bg-slate-900 hover:bg-black text-amber-400 text-xs font-mono font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-95 cursor-pointer disabled:opacity-50"
+                >
+                  {isRespondingToInvite ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                      <span>JOINING...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4 text-emerald-400" />
+                      <span>ACCEPT & JOIN EXPEDITION</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* URL JOIN CODE MODAL (Opened when navigating with ?join=CODE or /join/CODE) */}
+      <AnimatePresence>
+        {urlJoinCode && !activeInvitationModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md">
+            <motion.div
+              initial={{ scale: 0.92, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.92, opacity: 0, y: 20 }}
+              className="w-full max-w-md bg-white/95 rounded-3xl p-6 sm:p-8 border border-white/80 shadow-[0_25px_80px_rgba(0,0,0,0.35)] relative overflow-hidden text-center"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-500 text-white flex items-center justify-center font-black mx-auto mb-4 shadow-md">
+                <Compass className="w-7 h-7" />
+              </div>
+
+              <span className="px-3 py-1 rounded-full bg-orange-100 text-orange-800 text-[10px] font-mono font-black uppercase tracking-wider">
+                EXPEDITION CODE DETECTED
+              </span>
+
+              <h3 className="text-2xl font-black uppercase tracking-tight text-slate-900 mt-2 mb-1">
+                JOIN EXPEDITION SQUAD
+              </h3>
+
+              <div className="p-3 rounded-2xl bg-slate-100 font-mono font-black text-sm text-slate-800 tracking-wider my-4">
+                CODE: {urlJoinCode}
+              </div>
+
+              <p className="text-xs text-slate-600 mb-6 font-medium">
+                You're joining this expedition as an active squad explorer. Once joined, submit your 9 preferences to calibrate GroupDNA!
+              </p>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  disabled={isRespondingToInvite}
+                  onClick={() => setUrlJoinCode(null)}
+                  className="flex-1 py-3 rounded-2xl border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-mono font-bold uppercase transition-colors cursor-pointer"
+                >
+                  CANCEL
+                </button>
+                <button
+                  type="button"
+                  disabled={isRespondingToInvite}
+                  onClick={handleAcceptUrlJoin}
+                  className="flex-2 py-3 rounded-2xl bg-slate-900 hover:bg-black text-amber-400 text-xs font-mono font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-95 cursor-pointer disabled:opacity-50"
+                >
+                  {isRespondingToInvite ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                      <span>JOINING...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4 text-emerald-400" />
+                      <span>ACCEPT & JOIN</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

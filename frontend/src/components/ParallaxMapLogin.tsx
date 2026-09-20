@@ -15,7 +15,9 @@ import {
   AlertCircle, 
   Loader2,
   Lock,
-  RefreshCw
+  RefreshCw,
+  User,
+  AtSign
 } from 'lucide-react';
 import { loginApi, registerApi, forgotPasswordApi, resetPasswordWithOtpApi } from '../services/api';
 
@@ -28,6 +30,7 @@ export const ParallaxMapLogin: React.FC<ParallaxMapLoginProps> = ({ onLogin, def
   const [authMode, setAuthMode] = useState<'LOGIN' | 'SIGNUP' | 'FORGOT_PASSWORD'>('LOGIN');
   const [email, setEmail] = useState(defaultEmail);
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
@@ -115,9 +118,9 @@ export const ParallaxMapLogin: React.FC<ParallaxMapLoginProps> = ({ onLogin, def
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    const cleanEmail = email.trim();
-    if (!cleanEmail) {
-      setErrorMessage('Please enter a valid email address.');
+    const cleanIdentifier = email.trim();
+    if (!cleanIdentifier) {
+      setErrorMessage(authMode === 'LOGIN' ? 'Please enter your email or @username.' : 'Please enter your email address.');
       return;
     }
 
@@ -130,12 +133,13 @@ export const ParallaxMapLogin: React.FC<ParallaxMapLoginProps> = ({ onLogin, def
 
     if (authMode === 'LOGIN') {
       try {
-        const result = await loginApi({ email: cleanEmail, password });
+        const result = await loginApi({ identifier: cleanIdentifier, email: cleanIdentifier, password });
         if (result.success) {
           setSuccessMessage('Authentication verified! Launching Trip OS...');
-          const resolvedName = result.user?.name || result.user?.user_metadata?.name || name.trim() || 'EXPLORER';
+          const resolvedName = result.user?.profile?.name || result.user?.user_metadata?.name || result.user?.name || 'EXPLORER';
+          const resolvedEmail = result.user?.email || (cleanIdentifier.includes('@') ? cleanIdentifier : `${cleanIdentifier}@tripos.world`);
           setTimeout(() => {
-            onLogin(cleanEmail, resolvedName);
+            onLogin(resolvedEmail, resolvedName);
           }, 600);
         } else {
           setErrorMessage(result.message || 'Invalid credentials or connection error');
@@ -147,30 +151,41 @@ export const ParallaxMapLogin: React.FC<ParallaxMapLoginProps> = ({ onLogin, def
       }
     } else if (authMode === 'SIGNUP') {
       const cleanName = name.trim() || 'EXPLORER';
-      if (!cleanName) {
-        setErrorMessage('Please enter your explorer username / full name.');
+      const cleanUsername = username.trim().toLowerCase().replace('@', '').replace(/[^a-z0-9_]/g, '');
+
+      if (!cleanUsername) {
+        setErrorMessage('Please choose a unique explorer @username (alphanumeric).');
+        setIsLoading(false);
+        return;
+      }
+
+      if (!cleanIdentifier.includes('@')) {
+        setErrorMessage('Please provide a valid email address for account verification.');
         setIsLoading(false);
         return;
       }
 
       try {
-        const regResult = await registerApi({ name: cleanName, email: cleanEmail, password });
+        const regResult = await registerApi({ 
+          name: cleanName, 
+          username: cleanUsername,
+          email: cleanIdentifier, 
+          password 
+        });
         if (regResult.success) {
           setSuccessMessage('Account created successfully! Logging you in...');
-          // Automatically log in with the new credentials
-          const loginResult = await loginApi({ email: cleanEmail, password });
+          const loginResult = await loginApi({ identifier: cleanUsername, email: cleanIdentifier, password });
           if (loginResult.success) {
             setTimeout(() => {
-              onLogin(cleanEmail, cleanName);
+              onLogin(cleanIdentifier, cleanName);
             }, 600);
           } else {
-            // Fallback direct login
             setTimeout(() => {
-              onLogin(cleanEmail, cleanName);
+              onLogin(cleanIdentifier, cleanName);
             }, 800);
           }
         } else {
-          setErrorMessage(regResult.message || 'Registration failed. Try a different email.');
+          setErrorMessage(regResult.message || 'Registration failed. Try a different email or username.');
         }
       } catch (err: any) {
         setErrorMessage(err.message || 'Failed to create account.');
@@ -428,39 +443,72 @@ export const ParallaxMapLogin: React.FC<ParallaxMapLoginProps> = ({ onLogin, def
             {/* Login / Sign Up Form */}
             <form onSubmit={handleSubmit} className="space-y-3.5">
               {authMode === 'SIGNUP' && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className="space-y-1"
-                >
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                    EXPLORER USERNAME / FULL NAME *
-                  </label>
-                  <input 
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. ALEX MORGAN / RAHUL SHARMA"
-                    required={authMode === 'SIGNUP'}
-                    className="w-full px-4 py-3 glass-input text-slate-900 font-bold uppercase tracking-wide text-sm placeholder:text-slate-400"
-                  />
-                </motion.div>
+                <>
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="space-y-1"
+                  >
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                      FULL NAME *
+                    </label>
+                    <div className="relative">
+                      <input 
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="e.g. ALEX MORGAN"
+                        required={authMode === 'SIGNUP'}
+                        className="w-full px-4 py-3 glass-input text-slate-900 font-bold uppercase tracking-wide text-sm placeholder:text-slate-400 pl-10"
+                      />
+                      <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5 pointer-events-none" />
+                    </div>
+                  </motion.div>
+
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="space-y-1"
+                  >
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                      CHOOSE EXPLORER USERNAME *
+                    </label>
+                    <div className="relative">
+                      <input 
+                        type="text"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                        placeholder="e.g. pilot_ansh"
+                        required={authMode === 'SIGNUP'}
+                        className="w-full px-4 py-3 glass-input text-slate-900 font-bold tracking-wide text-sm placeholder:text-slate-400 pl-10 font-mono"
+                      />
+                      <AtSign className="w-4 h-4 text-orange-500 absolute left-3.5 top-3.5 pointer-events-none" />
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-500 block">
+                      Used by friends & leaders to invite you to trips.
+                    </span>
+                  </motion.div>
+                </>
               )}
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  TRAVEL EMAIL ADDRESS *
+                  {authMode === 'LOGIN' ? 'EMAIL ADDRESS OR @USERNAME *' : 'TRAVEL EMAIL ADDRESS *'}
                 </label>
                 <div className="relative">
                   <input 
-                    type="email"
+                    type={authMode === 'LOGIN' ? 'text' : 'email'}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="e.g. alex.morgan@gmail.com"
+                    placeholder={authMode === 'LOGIN' ? 'e.g. alex@gmail.com or @pilot_ansh' : 'e.g. alex.morgan@gmail.com'}
                     required
                     className="w-full px-4 py-3 glass-input text-slate-900 font-bold tracking-wide text-sm placeholder:text-slate-400 pl-10"
                   />
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5 pointer-events-none" />
+                  {authMode === 'LOGIN' && !email.includes('@') && email.length > 0 ? (
+                    <AtSign className="w-4 h-4 text-orange-500 absolute left-3.5 top-3.5 pointer-events-none" />
+                  ) : (
+                    <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5 pointer-events-none" />
+                  )}
                 </div>
               </div>
 

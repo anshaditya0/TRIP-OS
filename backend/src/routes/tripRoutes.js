@@ -17,6 +17,11 @@ const { requireTripMember, requireTripLeader } = require("../middleware/rbacMidd
 // Base Trip CRUD
 router.post("/", authMiddleware, tripController.createTrip);
 router.get("/", tripController.getAllTrips);
+
+// Trip Invitations (for logged in members) - must precede /:id
+router.get("/invitations", authMiddleware, memberController.getUserTripInvitations);
+router.patch("/invitations/:id/respond", authMiddleware, memberController.respondToTripInvitation);
+
 router.get("/:id", tripController.getTripById);
 router.patch("/:id", authMiddleware, tripController.updateTrip);
 router.delete("/:id", authMiddleware, tripController.deleteTrip);
@@ -32,6 +37,7 @@ router.get("/:id/offline-pack", tripController.getOfflinePack);
 
 // Group & Invite System
 router.post("/join", authMiddleware, memberController.joinTrip);
+router.post("/:id/invitations", authMiddleware, memberController.createTripInvitation);
 router.get("/:id/members", authMiddleware, memberController.getTripMembers);
 router.patch("/:id/members/:memberId/approve", authMiddleware, memberController.approveMember);
 

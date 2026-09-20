@@ -160,10 +160,10 @@ export const FriendsPage: React.FC<FriendsPageProps> = ({
 
           {/* Quick share own code pill */}
           <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 shrink-0 flex flex-col gap-1.5">
-            <span className="text-[9px] font-mono font-bold uppercase text-slate-400">YOUR EXPLORER ID</span>
+            <span className="text-[9px] font-mono font-bold uppercase text-slate-400">YOUR EXPLORER ID & USERNAME</span>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono font-black text-orange-300 select-all">
-                {user.email || myExplorerCode}
+                {user.username ? `@${user.username}` : user.email || myExplorerCode}
               </span>
               <button
                 type="button"
@@ -174,6 +174,11 @@ export const FriendsPage: React.FC<FriendsPageProps> = ({
                 {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
               </button>
             </div>
+            {user.username && user.email && (
+              <span className="text-[10px] font-mono text-slate-400">
+                Email: {user.email}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -191,7 +196,7 @@ export const FriendsPage: React.FC<FriendsPageProps> = ({
                 SEND FRIEND REQUEST
               </h3>
               <p className="text-[10px] font-bold text-slate-500 uppercase">
-                EXPAND YOUR EXPEDITION ROSTER
+                ADD BY @USERNAME OR EMAIL ADDRESS
               </p>
             </div>
           </div>
@@ -199,14 +204,14 @@ export const FriendsPage: React.FC<FriendsPageProps> = ({
           <form onSubmit={handleSendRequest} className="space-y-3">
             <div>
               <label className="text-[10px] font-mono font-black uppercase text-slate-600 block mb-1">
-                FRIEND'S EMAIL ID *
+                FRIEND'S @USERNAME OR EMAIL *
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
-                  type="email"
+                  type="text"
                   required
-                  placeholder="companion@tripos.world"
+                  placeholder="e.g. @wanderer or alex@tripos.world"
                   value={friendEmail}
                   onChange={(e) => setFriendEmail(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-white border border-slate-200 text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400/40"
@@ -356,13 +361,26 @@ export const FriendsPage: React.FC<FriendsPageProps> = ({
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-slate-900 to-neutral-800 text-white flex items-center justify-center font-black text-sm uppercase shrink-0 ring-2 ring-slate-100">
-                      {friend.name.slice(0, 2)}
-                    </div>
+                    {friend.avatar ? (
+                      <img
+                        src={friend.avatar}
+                        alt={friend.name}
+                        className="w-11 h-11 rounded-2xl object-cover shrink-0 ring-2 ring-slate-100 bg-slate-100"
+                      />
+                    ) : (
+                      <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-slate-900 to-neutral-800 text-white flex items-center justify-center font-black text-sm uppercase shrink-0 ring-2 ring-slate-100">
+                        {friend.name.slice(0, 2)}
+                      </div>
+                    )}
                     <div className="min-w-0">
                       <h4 className="text-sm font-black uppercase text-slate-900 truncate">
                         {friend.name}
                       </h4>
+                      {friend.username && (
+                        <span className="text-[10px] font-mono font-bold text-indigo-600 truncate block">
+                          @{friend.username}
+                        </span>
+                      )}
                       <p className="text-[11px] font-mono text-slate-500 truncate">
                         {friend.email}
                       </p>
@@ -371,11 +389,15 @@ export const FriendsPage: React.FC<FriendsPageProps> = ({
 
                   <button
                     type="button"
-                    onClick={() => handleRemoveFriend(friend.friend_id)}
-                    className="text-slate-300 hover:text-rose-500 p-1 transition-colors cursor-pointer"
+                    onClick={() => {
+                      if (window.confirm(`Remove ${friend.name} from your friends roster?`)) {
+                        handleRemoveFriend(friend.friend_id);
+                      }
+                    }}
+                    className="text-slate-300 hover:text-rose-500 p-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
                     title="Remove friend"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
 

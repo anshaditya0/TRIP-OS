@@ -198,8 +198,185 @@ const approveMember = async (req, res) => {
     }
 };
 
+const getUserTripInvitations = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const userEmail = (req.user.email || '').toLowerCase().trim();
+        const userUsername = (req.user.username || '').toLowerCase().trim();
+
+        const result = await pool.query(
+            `SELECT 
+                ti.id,
+                ti.trip_id,
+                ti.inviter_id,
+                ti.inviter_name,
+                ti.invite_code,
+                ti.status,
+                ti.created_at,
+                t.name as trip_name,
+                t.start_location,
+                t.end_location,
+                t.start_date,
+                t.end_date,
+                t.budget,
+                t.transport_mode,
+                u.name as leader_name,
+                u.email as leader_email
+             FROM trip_invitations ti
+             JOIN trips t ON t.id = ti.trip_id
+             LEFT JOIN users u ON u.id = ti.inviter_id
+             WHERE (ti.invitee_id = $1 OR LOWER(ti.invitee_email) = $2 OR (ti.invitee_username IS NOT NULL AND LOWER(ti.invitee_username) = $3))
+               AND ti.status = 'PENDING'
+             ORDER BY ti.created_at DESC`,
+            [userId, userEmail, userUsername || '__none__']
+        );
+
+        res.json({
+            invitations: result.rows
+        });
+    } catch (err) {
+        logger.error("Get user trip invitations error:", err);
+        res.status(500).json({ error: "Failed to fetch trip invitations" });
+    }
+};
+
+const respondToTripInvitation = async (req, res) => {
+    try {
+        const invitationId = req.params.id;
+        const { action } = req.body; // 'ACCEPT' or 'DECLINE'
+        const userId = req.user.id;
+        const userEmail = (req.user.email || '').toLowerCase().trim();
+        const userUsername = (req.user.username || '').toLowerCase().trim();
+
+        const invCheck = await pool.query(
+            `SELECT ti.*, t.name as trip_name, t.invite_code
+             FROM trip_invitations ti
+             JOIN trips t ON t.id = ti.trip_id
+             WHERE ti.id = $1 AND (ti.invitee_id = $2 OR LOWER(ti.invitee_email) = $3 OR (ti.invitee_username IS NOT NULL AND LOWER(ti.invitee_username) = $4))`,
+            [invitationId, userId, userEmail, userUsername || '__none__']
+        );
+
+        if (invCheck.rows.length === 0) {
+            return res.status(404).json({ error: "Trip invitation not found" });
+        }
+
+        const invitation = invCheck.rows[0];
+
+        if (action === 'ACCEPT') {
+            await pool.query(
+                `UPDATE trip_invitations
+                 SET status = 'ACCEPTED', invitee_id = $1, updated_at = NOW()
+                 WHERE id = $2`,
+                [userId, invitationId]
+            );
+
+            // Add or approve member in trip_members
+            await pool.query(
+                `INSERT INTO trip_members (trip_id, user_id, role, status, joined_via, approved_at)
+                 VALUES ($1, $2, 'MEMBER', 'APPROVED', 'INVITATION', NOW())
+                 ON CONFLICT (trip_id, user_id)
+                 DO UPDATE SET status = 'APPROVED', approved_at = NOW()`,
+                [invitation.trip_id, userId]
+            );
+
+            return res.json({
+                message: `You have successfully joined ${invitation.trip_name}! 🚀`,
+                tripId: invitation.trip_id,
+                status: 'APPROVED'
+            });
+        } else {
+            await pool.query(
+                `UPDATE trip_invitations
+                 SET status = 'DECLINED', updated_at = NOW()
+                 WHERE id = $1`,
+                [invitationId]
+            );
+
+            await pool.query(
+                `DELETE FROM trip_members WHERE trip_id = $1 AND user_id = $2`,
+                [invitation.trip_id, userId]
+            );
+
+            return res.json({
+                message: "Trip invitation declined"
+            });
+        }
+    } catch (err) {
+        logger.error("Respond to trip invitation error:", err);
+        res.status(500).json({ error: "Failed to respond to trip invitation" });
+    }
+};
+
+const createTripInvitation = async (req, res) => {
+    try {
+        const tripId = req.params.id;
+        const { email, username, friendId } = req.body;
+        const inviterId = req.user.id;
+        const inviterName = req.user.user_metadata?.name || req.user.name || "Trip Leader";
+
+        // Verify trip exists
+        const tripRes = await pool.query(
+            `SELECT id, name, invite_code FROM trips WHERE id = $1`,
+            [tripId]
+        );
+        if (tripRes.rows.length === 0) {
+            return res.status(404).json({ error: "Trip not found" });
+        }
+        const trip = tripRes.rows[0];
+
+        let targetUserId = friendId || null;
+        let targetEmail = (email || '').trim().toLowerCase() || null;
+        let targetUsername = (username || '').trim().toLowerCase().replace('@', '') || null;
+
+        // If username or email provided, lookup user
+        if (!targetUserId && (targetEmail || targetUsername)) {
+            const u = await pool.query(
+                `SELECT id, email, username FROM users 
+                 WHERE (LOWER(email) = $1 OR LOWER(username) = $2) LIMIT 1`,
+                [targetEmail || '', targetUsername || '']
+            );
+            if (u.rows.length > 0) {
+                targetUserId = u.rows[0].id;
+                if (!targetEmail) targetEmail = u.rows[0].email;
+                if (!targetUsername) targetUsername = u.rows[0].username;
+            }
+        }
+
+        // Insert invitation
+        const invRes = await pool.query(
+            `INSERT INTO trip_invitations 
+                (trip_id, inviter_id, inviter_name, invitee_id, invitee_email, invitee_username, invite_code, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING')
+             RETURNING *`,
+            [trip.id, inviterId, inviterName, targetUserId, targetEmail, targetUsername, trip.invite_code]
+        );
+
+        // Also create pending member record
+        if (targetUserId) {
+            await pool.query(
+                `INSERT INTO trip_members (trip_id, user_id, role, status, joined_via)
+                 VALUES ($1, $2, 'MEMBER', 'PENDING', 'DIRECT_INVITE')
+                 ON CONFLICT (trip_id, user_id) DO NOTHING`,
+                [trip.id, targetUserId]
+            );
+        }
+
+        res.status(201).json({
+            message: `Invitation to ${trip.name} sent successfully 🚀`,
+            invitation: invRes.rows[0]
+        });
+
+    } catch (err) {
+        logger.error("Create trip invitation error:", err);
+        res.status(500).json({ error: "Failed to create trip invitation" });
+    }
+};
+
 module.exports = {
     joinTrip,
     getTripMembers,
-    approveMember
+    approveMember,
+    getUserTripInvitations,
+    respondToTripInvitation,
+    createTripInvitation
 };

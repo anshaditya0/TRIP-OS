@@ -3,10 +3,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   User, Mail, ShieldCheck, FileText, CreditCard, Settings as SettingsIcon, 
   Plus, CheckCircle2, Trash2, ArrowUpRight, DollarSign, Bell, Sliders, Moon, Sparkles,
-  Award, Trophy, MapPin, X, Loader2
+  Award, Trophy, MapPin, X, Loader2, Edit3, AtSign, RefreshCw, Check
 } from 'lucide-react';
 import { DigitalDocument, PersonalExpense, UserProfile, JourneyCollectible } from '../types';
-import { fetchMyBadges, claimBadgeApi } from '../services/api';
+import { fetchMyBadges, claimBadgeApi, updateProfileApi } from '../services/api';
 
 interface ProfilePageProps {
   user: UserProfile;
@@ -110,6 +110,85 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     }
   };
 
+  // Edit Profile / Avatar State
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [editName, setEditName] = useState(user.name || '');
+  const [editUsername, setEditUsername] = useState(user.username || '');
+  const [editAvatarUrl, setEditAvatarUrl] = useState(user.avatar_url || user.avatar || '');
+  const [editBio, setEditBio] = useState(user.bio || '');
+  const [avatarStyle, setAvatarStyle] = useState('adventurer');
+  const [avatarSeed, setAvatarSeed] = useState('');
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [profileSuccessToast, setProfileSuccessToast] = useState<string | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setEditName(user.name || '');
+    setEditUsername(user.username || '');
+    setEditAvatarUrl(user.avatar_url || user.avatar || '');
+    setEditBio(user.bio || '');
+  }, [user]);
+
+  const DICEBEAR_PRESETS = [
+    { name: 'Alpine Nomad', style: 'adventurer', seed: 'Alpine' },
+    { name: 'Cyber Voyager', style: 'bottts', seed: 'CyberVoyager' },
+    { name: 'Starlight Scout', style: 'lorelei', seed: 'Starlight' },
+    { name: 'Desert Hawk', style: 'micah', seed: 'Falcon' },
+    { name: 'Apex Pilot', style: 'adventurer', seed: 'Apex' },
+    { name: 'Neon Glider', style: 'bottts', seed: 'Pathfinder' },
+    { name: 'Himalayan Sherpa', style: 'lorelei', seed: 'Sherpa' },
+    { name: 'Quantum Rover', style: 'bottts', seed: 'Quantum' },
+    { name: 'Highland Trekker', style: 'adventurer', seed: 'Highland' },
+    { name: 'Glacier Ranger', style: 'micah', seed: 'Glacier' },
+    { name: 'Pixel Wanderer', style: 'pixel-art', seed: 'Trekker' },
+    { name: 'Solar Wayfarer', style: 'fun-emoji', seed: 'Wayfarer' },
+  ];
+
+  const getDicebearUrl = (style: string, seed: string) =>
+    `https://api.dicebear.com/9.x/${style}/svg?seed=${encodeURIComponent(seed)}`;
+
+  const handleRandomizeAvatar = () => {
+    const randomSeed = 'exp_' + Math.random().toString(36).substring(2, 7);
+    setAvatarSeed(randomSeed);
+    setEditAvatarUrl(getDicebearUrl(avatarStyle, randomSeed));
+  };
+
+  const handleSelectPreset = (style: string, seed: string) => {
+    setAvatarStyle(style);
+    setAvatarSeed(seed);
+    setEditAvatarUrl(getDicebearUrl(style, seed));
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsUpdatingProfile(true);
+    setProfileError(null);
+    try {
+      const cleanUsername = editUsername.replace(/^@/, '').trim().toLowerCase();
+      const res = await updateProfileApi({
+        name: editName.trim(),
+        username: cleanUsername,
+        avatar_url: editAvatarUrl.trim(),
+        bio: editBio.trim()
+      });
+      const updatedUser = res.user;
+      onUpdateUser({
+        name: updatedUser.name,
+        username: updatedUser.username,
+        avatar: updatedUser.avatar_url || editAvatarUrl,
+        avatar_url: updatedUser.avatar_url || editAvatarUrl,
+        bio: updatedUser.bio
+      });
+      setProfileSuccessToast('EXPLORER PROFILE & AVATAR UPDATED SUCCESSFULLY');
+      setTimeout(() => setProfileSuccessToast(null), 4000);
+      setIsEditProfileOpen(false);
+    } catch (err: any) {
+      setProfileError(err?.message || 'Failed to update profile. Username may already be taken.');
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
+
   // Generic Settings State
   const [currency, setCurrency] = useState('INR (₹)');
   const [autoWeather, setAutoWeather] = useState(true);
@@ -202,33 +281,58 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       {activeSubTab === 'profile' ? (
         <div className="space-y-8">
           {/* USER INFO & STATS HERO */}
-          <div className="glass-card p-6 sm:p-8 border border-white/80 flex flex-col md:flex-row items-center justify-between gap-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          <div className="glass-card p-6 sm:p-8 border border-white/80 flex flex-col md:flex-row items-center justify-between gap-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden">
             <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
-              {user.avatar ? (
-                <img
-                  src={user.avatar}
-                  alt={user.name}
-                  className="w-24 h-24 rounded-3xl object-cover ring-2 ring-white shadow-md"
-                />
-              ) : (
-                <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-slate-900 via-slate-800 to-orange-950 text-amber-400 font-black text-3xl flex flex-col items-center justify-center ring-2 ring-white shadow-md">
-                  <span>{user.name ? user.name.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2) : 'EX'}</span>
-                  <span className="text-[9px] font-mono tracking-widest text-slate-400 uppercase mt-0.5">TRIP OS</span>
+              <div className="relative group cursor-pointer" onClick={() => setIsEditProfileOpen(true)}>
+                {user.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={user.name}
+                    className="w-24 h-24 rounded-3xl object-cover ring-2 ring-white shadow-md group-hover:opacity-90 transition-opacity"
+                  />
+                ) : (
+                  <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-slate-900 via-slate-800 to-orange-950 text-amber-400 font-black text-3xl flex flex-col items-center justify-center ring-2 ring-white shadow-md">
+                    <span>{user.name ? user.name.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2) : 'EX'}</span>
+                    <span className="text-[9px] font-mono tracking-widest text-slate-400 uppercase mt-0.5">TRIP OS</span>
+                  </div>
+                )}
+                <div className="absolute inset-0 rounded-3xl bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-mono font-black uppercase">
+                  <Edit3 className="w-4 h-4 mr-1" /> EDIT
                 </div>
-              )}
+              </div>
+
               <div>
-                <div className="flex items-center gap-2 justify-center sm:justify-start mb-1">
+                <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start mb-1">
                   <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase tracking-wider">
                     {user.badge}
                   </span>
                   <span className="text-xs font-bold text-slate-500 uppercase">{user.homeCity}</span>
+                  {user.username && (
+                    <span className="px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200/80 text-indigo-700 text-[10px] font-mono font-bold">
+                      @{user.username}
+                    </span>
+                  )}
                 </div>
                 <h2 className="text-2xl sm:text-3xl font-black uppercase text-slate-900">
                   {user.name}
                 </h2>
-                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600 justify-center sm:justify-start mt-1">
-                  <Mail className="w-3.5 h-3.5 text-orange-500" />
-                  <span>{user.email}</span>
+                {user.bio && (
+                  <p className="text-xs font-medium text-slate-600 mt-1 max-w-md italic">
+                    "{user.bio}"
+                  </p>
+                )}
+                <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-slate-600 justify-center sm:justify-start mt-2">
+                  <div className="flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5 text-orange-500" />
+                    <span>{user.email}</span>
+                  </div>
+                  <button
+                    onClick={() => setIsEditProfileOpen(true)}
+                    className="px-3 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-xs transition-transform active:scale-95"
+                  >
+                    <Edit3 className="w-3 h-3 text-amber-400" />
+                    <span>EDIT PROFILE & AVATAR</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -250,8 +354,27 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             </div>
           </div>
 
-          {/* Toast notification */}
+          {/* Toast notifications */}
           <AnimatePresence>
+            {profileSuccessToast && (
+              <motion.div
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                className="p-3.5 rounded-2xl bg-slate-900 text-amber-400 border border-amber-400/40 font-mono text-xs font-bold uppercase tracking-wider shadow-lg flex items-center justify-between gap-3"
+              >
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  <span>{profileSuccessToast}</span>
+                </div>
+                <button
+                  onClick={() => setProfileSuccessToast(null)}
+                  className="p-1 hover:bg-white/20 rounded-lg cursor-pointer text-slate-400 hover:text-white"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </motion.div>
+            )}
             {badgeToast && (
               <motion.div
                 initial={{ opacity: 0, y: -10, scale: 0.95 }}
@@ -897,6 +1020,257 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                   >
                     <Award className="w-4 h-4 text-white" />
                     <span>UNLOCK BADGE TO PROFILE</span>
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* EDIT PROFILE & AVATAR MODAL */}
+      <AnimatePresence>
+        {isEditProfileOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              className="w-full max-w-2xl max-h-[90vh] overflow-y-auto glass-card p-6 sm:p-8 border border-white/80 bg-white/95 shadow-[0_25px_70px_rgba(0,0,0,0.3)] rounded-3xl"
+            >
+              <div className="flex items-center justify-between pb-4 border-b border-slate-200 mb-6">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-slate-900 to-indigo-900 text-amber-400 flex items-center justify-center font-black shadow-xs">
+                    <Edit3 className="w-5 h-5 text-amber-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">
+                      EDIT EXPLORER IDENTITY & AVATAR
+                    </h3>
+                    <p className="text-xs font-bold text-slate-500 uppercase">
+                      CUSTOMIZE AVATAR, CHOOSE USERNAME & UPDATE BIO
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsEditProfileOpen(false)}
+                  className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold cursor-pointer transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {profileError && (
+                <div className="p-3 mb-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-mono font-bold uppercase tracking-wider">
+                  ⚠️ {profileError}
+                </div>
+              )}
+
+              <form onSubmit={handleSaveProfile} className="space-y-6">
+                {/* AVATAR SECTION */}
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-mono font-black uppercase text-slate-700 tracking-wider">
+                      SELECT OR GENERATE EXPLORER AVATAR
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleRandomizeAvatar}
+                      className="px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 text-[10px] font-mono font-bold uppercase flex items-center gap-1.5 cursor-pointer transition-colors"
+                    >
+                      <RefreshCw className="w-3 h-3" /> RANDOMIZE SEED
+                    </button>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-center gap-6 mb-4">
+                    {/* Live Preview */}
+                    <div className="relative">
+                      <img
+                        src={editAvatarUrl || getDicebearUrl('adventurer', 'explorer')}
+                        alt="Avatar Preview"
+                        className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl object-cover bg-white ring-4 ring-amber-400/40 shadow-lg"
+                      />
+                      <span className="absolute -bottom-2 -right-2 px-2 py-0.5 rounded-full bg-slate-900 text-amber-400 text-[9px] font-mono font-black uppercase">
+                        PREVIEW
+                      </span>
+                    </div>
+
+                    {/* Generator Controls */}
+                    <div className="flex-1 space-y-3 w-full">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[10px] font-mono font-bold uppercase text-slate-600 mb-1">
+                            AVATAR STYLE
+                          </label>
+                          <select
+                            value={avatarStyle}
+                            onChange={(e) => {
+                              const newStyle = e.target.value;
+                              setAvatarStyle(newStyle);
+                              setEditAvatarUrl(getDicebearUrl(newStyle, avatarSeed || editUsername || 'explorer'));
+                            }}
+                            className="w-full px-3 py-2 text-xs glass-input font-bold uppercase text-slate-800"
+                          >
+                            <option value="adventurer">Adventurer (Illustrated)</option>
+                            <option value="bottts">Bottts (Cyborg / Tech)</option>
+                            <option value="lorelei">Lorelei (Minimalist Chic)</option>
+                            <option value="micah">Micah (Modern Flat)</option>
+                            <option value="pixel-art">Pixel Art (Retro)</option>
+                            <option value="fun-emoji">Fun Emoji (Vibrant)</option>
+                            <option value="avataaars">Avataaars (Cartoon)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-mono font-bold uppercase text-slate-600 mb-1">
+                            CUSTOM SEED / NAME
+                          </label>
+                          <input
+                            type="text"
+                            value={avatarSeed}
+                            onChange={(e) => {
+                              const seed = e.target.value;
+                              setAvatarSeed(seed);
+                              setEditAvatarUrl(getDicebearUrl(avatarStyle, seed || 'explorer'));
+                            }}
+                            placeholder="e.g. Phoenix, Trekker..."
+                            className="w-full px-3 py-2 text-xs glass-input font-mono"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-mono font-bold uppercase text-slate-600 mb-1">
+                          DIRECT IMAGE URL (OPTIONAL)
+                        </label>
+                        <input
+                          type="url"
+                          value={editAvatarUrl}
+                          onChange={(e) => setEditAvatarUrl(e.target.value)}
+                          placeholder="https://..."
+                          className="w-full px-3 py-1.5 text-[11px] glass-input font-mono text-slate-700"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 12 Presets Grid */}
+                  <div>
+                    <label className="block text-[10px] font-mono font-bold uppercase text-slate-500 mb-2">
+                      OR CHOOSE A QUICK EXPLORER PRESET:
+                    </label>
+                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                      {DICEBEAR_PRESETS.map((preset) => {
+                        const url = getDicebearUrl(preset.style, preset.seed);
+                        const isSelected = editAvatarUrl === url;
+                        return (
+                          <button
+                            key={preset.name}
+                            type="button"
+                            onClick={() => handleSelectPreset(preset.style, preset.seed)}
+                            className={`p-1.5 rounded-2xl flex flex-col items-center gap-1 transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-amber-100 ring-2 ring-amber-500 shadow-sm scale-105'
+                                : 'bg-white hover:bg-slate-100 border border-slate-200'
+                            }`}
+                          >
+                            <img
+                              src={url}
+                              alt={preset.name}
+                              className="w-10 h-10 rounded-xl object-cover bg-slate-50"
+                            />
+                            <span className="text-[9px] font-mono font-bold text-slate-700 truncate w-full text-center">
+                              {preset.name}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* USER INFO FIELDS */}
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[11px] font-mono font-bold uppercase tracking-wider text-slate-700 mb-1">
+                        FULL NAME *
+                      </label>
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        placeholder="Your full name"
+                        required
+                        className="w-full px-3.5 py-2.5 text-xs glass-input font-bold uppercase text-slate-900"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-mono font-bold uppercase tracking-wider text-slate-700 mb-1">
+                        EXPLORER USERNAME (@HANDLE) *
+                      </label>
+                      <div className="relative flex items-center">
+                        <span className="absolute left-3 text-slate-400 font-mono font-bold text-xs">@</span>
+                        <input
+                          type="text"
+                          value={editUsername.replace(/^@/, '')}
+                          onChange={(e) => setEditUsername(e.target.value.replace(/^@/, '').toLowerCase().trim())}
+                          placeholder="username_explorer"
+                          required
+                          className="w-full pl-7 pr-3.5 py-2.5 text-xs glass-input font-mono font-bold text-slate-900"
+                        />
+                      </div>
+                      <span className="text-[10px] font-mono text-slate-500 mt-1 block">
+                        Friends & squad leaders can search and invite you with this username.
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-mono font-bold uppercase tracking-wider text-slate-700 mb-1">
+                      EXPLORER BIO & MOTTO
+                    </label>
+                    <textarea
+                      value={editBio}
+                      onChange={(e) => setEditBio(e.target.value)}
+                      placeholder="e.g. Alpine trekker, foodie & sunset chaser across India."
+                      rows={2}
+                      maxLength={160}
+                      className="w-full px-3.5 py-2.5 text-xs glass-input font-medium text-slate-800"
+                    />
+                    <div className="flex justify-between text-[10px] font-mono text-slate-400 mt-1">
+                      <span>Max 160 characters</span>
+                      <span>{editBio.length} / 160</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* MODAL ACTIONS */}
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditProfileOpen(false)}
+                    className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-mono font-bold uppercase hover:bg-slate-100 cursor-pointer"
+                  >
+                    CANCEL
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isUpdatingProfile}
+                    className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 text-xs font-mono font-black uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer transition-transform active:scale-95 disabled:opacity-50"
+                  >
+                    {isUpdatingProfile ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                        <span>SAVING...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4 text-emerald-400" />
+                        <span>SAVE PROFILE & AVATAR</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </form>

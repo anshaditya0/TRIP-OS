@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { TripMember, GroupDNA, DestinationRecommendation, MoodMeterConfig } from '../../types';
 import { rankDestinationsWithDNA, calculateLocalGroupDNA, savePreferencesApi } from '../../services/api';
+import { DynamicMoodMeter } from '../DynamicMoodMeter';
 
 interface StepGroupDNAProps {
   tripId: string | number;
@@ -18,24 +19,7 @@ interface StepGroupDNAProps {
   onBack: () => void;
 }
 
-const PREFERENCE_DIMENSIONS: Array<{
-  key: keyof MoodMeterConfig;
-  label: string;
-  emoji: string;
-  lowLabel: string;
-  highLabel: string;
-  color: string;
-}> = [
-  { key: 'adventure', label: 'ADVENTURE & THRILL', emoji: '🧗‍♂️', lowLabel: 'GENTLE SCENIC', highLabel: 'EXTREME ADRENALINE', color: 'from-orange-500 to-amber-500' },
-  { key: 'nature', label: 'NATURE & SCENERY', emoji: '🌲', lowLabel: 'URBAN VIBES', highLabel: 'DEEP WILDERNESS', color: 'from-emerald-500 to-teal-500' },
-  { key: 'food', label: 'CULINARY & FOOD', emoji: '🍲', lowLabel: 'QUICK BITES', highLabel: 'GOURMET / STREET FEASTS', color: 'from-amber-500 to-orange-600' },
-  { key: 'photography', label: 'PHOTOGRAPHY & SPOTS', emoji: '📸', lowLabel: 'CASUAL SNAPS', highLabel: 'GOLDEN HOUR SHOOTS', color: 'from-blue-500 to-indigo-500' },
-  { key: 'nightlife', label: 'NIGHTLIFE & SOCIAL', emoji: '🍸', lowLabel: 'EARLY BEDTIME', highLabel: 'ALL-NIGHT CLUBS / BARS', color: 'from-purple-500 to-pink-500' },
-  { key: 'relaxation', label: 'RELAXATION & SPA', emoji: '🧘', lowLabel: 'NON-STOP EXPLORATION', highLabel: 'LUXURY RETREAT & POOLS', color: 'from-teal-500 to-emerald-600' },
-  { key: 'budgetSensitivity', label: 'BUDGET SENSITIVITY', emoji: '💰', lowLabel: 'SPLURGE COMFORT', highLabel: 'FRUGAL VALUE SAVER', color: 'from-amber-600 to-yellow-500' },
-  { key: 'walkingTolerance', label: 'WALKING & TREKKING', emoji: '🚶‍♂️', lowLabel: 'CAB & AUTO ONLY', highLabel: '20K+ STEPS TREKS', color: 'from-cyan-500 to-blue-600' },
-  { key: 'crowdTolerance', label: 'CROWD TOLERANCE', emoji: '👥', lowLabel: 'SECLUDED / QUIET', highLabel: 'BUSTLING FESTIVALS', color: 'from-rose-500 to-red-500' },
-];
+
 
 export const StepGroupDNA: React.FC<StepGroupDNAProps> = ({
   tripId,
@@ -259,42 +243,11 @@ export const StepGroupDNA: React.FC<StepGroupDNAProps> = ({
           </button>
         </div>
 
-        {/* Sliders Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {PREFERENCE_DIMENSIONS.map((dim) => {
-            const val = currentPrefs[dim.key] || 50;
-            return (
-              <div key={dim.key} className="p-4 rounded-2xl bg-slate-50/70 border border-slate-200/60 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black uppercase text-slate-800 flex items-center gap-1.5">
-                    <span>{dim.emoji}</span>
-                    <span>{dim.label}</span>
-                  </span>
-                  <span className="text-xs font-mono font-black text-slate-900 px-2 py-0.5 rounded-lg bg-white border border-slate-200 shadow-2xs">
-                    {val}%
-                  </span>
-                </div>
-
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={val}
-                  onChange={(e) => {
-                    const nextVal = parseInt(e.target.value, 10);
-                    setCurrentPrefs((prev) => ({ ...prev, [dim.key]: nextVal }));
-                  }}
-                  className="w-full accent-orange-500 cursor-pointer h-2 bg-slate-200 rounded-lg appearance-none"
-                />
-
-                <div className="flex items-center justify-between text-[9px] font-mono font-bold text-slate-600 uppercase">
-                  <span>{dim.lowLabel}</span>
-                  <span>{dim.highLabel}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        {/* Kinetic 3x3 Endurance Profile Sliders from DynamicMoodMeter */}
+        <DynamicMoodMeter
+          config={currentPrefs}
+          onChange={(newMood) => setCurrentPrefs(newMood)}
+        />
       </div>
 
       {/* Lock Status / GroupDNA Telemetry Engine Section */}

@@ -310,7 +310,10 @@ export interface VenueWhatIfResult {
 export interface UserProfile {
   name: string;
   email: string;
+  username?: string;
   avatar: string;
+  avatar_url?: string;
+  bio?: string;
   badge: string;
   homeCity: string;
   tripsCount: number;
@@ -326,6 +329,7 @@ export interface FriendUser {
   friend_id: string;
   name: string;
   email: string;
+  username?: string;
   avatar?: string;
   homeCity?: string;
   tripsCount?: number;
@@ -342,6 +346,28 @@ export interface FriendRequestItem {
   receiver_email?: string;
   created_at: string;
   status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+}
+
+export interface TripInvitation {
+  id: number;
+  trip_id: number;
+  inviter_id: string;
+  inviter_name?: string;
+  invitee_id?: string;
+  invitee_email?: string;
+  invitee_username?: string;
+  invite_code?: string;
+  status: 'PENDING' | 'ACCEPTED' | 'DECLINED';
+  created_at: string;
+  trip_name: string;
+  start_location?: string;
+  end_location?: string;
+  start_date?: string;
+  end_date?: string;
+  budget?: number;
+  transport_mode?: string;
+  leader_name?: string;
+  leader_email?: string;
 }
 
 

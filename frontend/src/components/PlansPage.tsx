@@ -12,7 +12,7 @@ import { StepBudgetVibe } from './plans/StepBudgetVibe';
 import { StepReview } from './plans/StepReview';
 import { FinalItineraryView } from './plans/FinalItineraryView';
 import { AddMembersModal } from './plans/AddMembersModal';
-import { createTripApi } from '../services/api';
+import { createTripApi, createTripInvitationApi } from '../services/api';
 
 interface PlansPageProps {
   currentPlan: ItineraryPlan | null;
@@ -204,17 +204,33 @@ const PlansPageInternal: React.FC<PlansPageProps> = ({
   }, [currentPlan?.id]);
 
   // Member Management Handlers
-  const handleAddMember = (name: string, email?: string) => {
+  const handleAddMember = async (name: string, emailOrUsername?: string) => {
     const newMember: TripMember = {
       id: `member-${Date.now()}`,
       name,
-      email,
+      email: emailOrUsername,
       role: 'MEMBER',
       status: 'APPROVED',
       preferencesSubmitted: false
     };
     setMembers(prev => [...prev, newMember]);
     setFriendsCount(prev => prev + 1);
+
+    // If trip exists in backend, dispatch invitation
+    if (emailOrUsername && currentPlan?.id) {
+      const cleanId = String(currentPlan.id).replace('trip-', '');
+      if (!isNaN(Number(cleanId))) {
+        const isEmail = emailOrUsername.includes('@') && emailOrUsername.includes('.');
+        try {
+          await createTripInvitationApi(Number(cleanId), {
+            email: isEmail ? emailOrUsername : undefined,
+            username: !isEmail ? emailOrUsername.replace(/^@/, '') : undefined
+          });
+        } catch (e) {
+          console.warn('Sync trip invite to backend notice:', e);
+        }
+      }
+    }
   };
 
   const handleApproveMember = (memberId: string) => {
