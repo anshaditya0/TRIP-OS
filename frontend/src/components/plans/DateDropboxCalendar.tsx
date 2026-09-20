@@ -30,7 +30,8 @@ export const DateDropboxCalendar: React.FC<DateDropboxCalendarProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Parse initial selectedDate or fallback to current date
-  const parsedDate = selectedDate ? new Date(selectedDate + 'T00:00:00') : new Date();
+  const cleanDateStr = typeof selectedDate === 'string' && selectedDate.includes('T') ? selectedDate.split('T')[0] : (selectedDate || '');
+  const parsedDate = cleanDateStr ? new Date(cleanDateStr + 'T00:00:00') : new Date();
   const safeDate = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
 
   // Calendar navigation state (month & year being viewed)
@@ -80,8 +81,10 @@ export const DateDropboxCalendar: React.FC<DateDropboxCalendarProps> = ({
   };
 
   // Compute days in current viewed month
-  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-  const firstDayOfWeek = new Date(viewYear, viewMonth, 1).getDay();
+  const rawDaysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const daysInMonth = Math.max(28, Math.min(31, isNaN(rawDaysInMonth) ? 30 : rawDaysInMonth));
+  const rawFirstDay = new Date(viewYear, viewMonth, 1).getDay();
+  const firstDayOfWeek = Math.max(0, Math.min(6, isNaN(rawFirstDay) ? 0 : rawFirstDay));
 
   const handleSelectDay = (day: number) => {
     const monthStr = String(viewMonth + 1).padStart(2, '0');
@@ -106,12 +109,13 @@ export const DateDropboxCalendar: React.FC<DateDropboxCalendarProps> = ({
   const formatDisplayDate = (dateStr: string) => {
     if (!dateStr) return 'SELECT EXPEDITION DATE';
     try {
-      const d = new Date(dateStr + 'T00:00:00');
+      const clean = typeof dateStr === 'string' && dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+      const d = new Date(clean + 'T00:00:00');
       if (isNaN(d.getTime())) return dateStr;
       const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-      const dayName = dayNames[d.getDay()];
+      const dayName = dayNames[d.getDay()] || 'EXP';
       const day = d.getDate();
-      const month = MONTH_NAMES[d.getMonth()]?.slice(0, 3);
+      const month = MONTH_NAMES[d.getMonth()]?.slice(0, 3) || 'EXP';
       const year = d.getFullYear();
       return `${dayName}, ${day} ${month} ${year}`;
     } catch {

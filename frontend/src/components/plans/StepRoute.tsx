@@ -97,7 +97,7 @@ export const StepRoute: React.FC<StepRouteProps> = ({
                     type="button"
                     onClick={() => onChangeFrom(city)}
                     className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full transition-all cursor-pointer ${
-                      fromLocation.toLowerCase() === city.toLowerCase()
+                      String(fromLocation || '').toLowerCase() === city.toLowerCase()
                         ? 'bg-neutral-900 text-white font-black shadow-2xs'
                         : 'bg-white/80 text-slate-600 hover:bg-orange-100 hover:text-orange-900 border border-slate-200/60'
                     }`}
@@ -140,20 +140,27 @@ export const StepRoute: React.FC<StepRouteProps> = ({
                 POPULAR HUBS:
               </span>
               <div className="flex flex-wrap gap-1.5">
-                {POPULAR_HUBS.map((city) => (
-                  <button
-                    key={city}
-                    type="button"
-                    onClick={() => onChangeTo(city)}
-                    className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full transition-all cursor-pointer ${
-                      toLocation.toLowerCase().includes(city.toLowerCase()) || city.toLowerCase().includes(toLocation.toLowerCase())
-                        ? 'bg-emerald-700 text-white font-black shadow-2xs'
-                        : 'bg-white/80 text-slate-600 hover:bg-emerald-100 hover:text-emerald-900 border border-slate-200/60'
-                    }`}
-                  >
-                    {city}
-                  </button>
-                ))}
+                {POPULAR_HUBS.map((city) => {
+                  const safeTo = String(toLocation || '').trim().toLowerCase();
+                  const isSelected = Boolean(safeTo) && (
+                    safeTo.includes(city.toLowerCase()) || 
+                    city.toLowerCase().includes(safeTo)
+                  );
+                  return (
+                    <button
+                      key={city}
+                      type="button"
+                      onClick={() => onChangeTo(city)}
+                      className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-emerald-700 text-white font-black shadow-2xs'
+                          : 'bg-white/80 text-slate-600 hover:bg-emerald-100 hover:text-emerald-900 border border-slate-200/60'
+                      }`}
+                    >
+                      {city}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>

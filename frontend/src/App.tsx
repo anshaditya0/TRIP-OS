@@ -842,6 +842,11 @@ export default function App() {
                   currentPlan={currentPlan}
                   onPlanCreated={handlePlanCreated}
                   onSavePlan={handleSavePlan}
+                  onReset={() => {
+                    setCurrentPlan(null);
+                    setPlannerDestination('');
+                    setPlannerKey((k) => k + 1);
+                  }}
                   initialDestination={plannerDestination}
                   weatherType={weatherTheme}
                   user={user}

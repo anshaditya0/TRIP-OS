@@ -18,6 +18,7 @@ interface PlansPageProps {
   currentPlan: ItineraryPlan | null;
   onPlanCreated: (plan: ItineraryPlan) => void;
   onSavePlan: (plan: ItineraryPlan) => void;
+  onReset?: () => void;
   initialDestination?: string;
   weatherType: WeatherType;
   user?: UserProfile;
@@ -25,6 +26,7 @@ interface PlansPageProps {
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
+  onReset?: () => void;
 }
 
 interface ErrorBoundaryState {
@@ -47,8 +49,14 @@ class PlansPageErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundary
   }
 
   handleReset = () => {
+    try {
+      localStorage.removeItem('tripos_active_plan');
+      localStorage.removeItem('tripos_planner_step');
+    } catch {}
     this.setState({ hasError: false, error: null });
-    window.location.reload();
+    if (this.props.onReset) {
+      this.props.onReset();
+    }
   };
 
   render() {
@@ -70,6 +78,21 @@ class PlansPageErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundary
                 A transient rendering irregularity occurred. We protected your session from going blank. Click below to re-initialize your trip planner cleanly.
               </p>
             </div>
+
+            {this.state.error && (
+              <div className="p-3.5 rounded-2xl bg-red-50/90 border border-red-200 text-left font-mono text-xs text-red-800 space-y-1 max-w-md mx-auto">
+                <p className="font-bold flex items-center gap-1.5 text-red-900">
+                  <AlertTriangle className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                  <span>{this.state.error.name}: {this.state.error.message}</span>
+                </p>
+                {this.state.error.stack && (
+                  <p className="text-[10px] text-red-600 line-clamp-3 whitespace-pre-wrap opacity-80 mt-1">
+                    {this.state.error.stack.split('\n').slice(0, 3).join('\n')}
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="pt-2">
               <button
                 type="button"
@@ -126,7 +149,7 @@ const PlansPageInternal: React.FC<PlansPageProps> = ({
   const [dailyStartTime, setDailyStartTime] = useState<string>(currentPlan?.dailyStartTime || '09:00 AM');
 
   // Dynamic invite code generated cleanly for this trip
-  const [inviteCode] = useState<string>(() => currentPlan?.inviteCode || `EXP-${(toLocation || 'TRIP').slice(0, 3).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`);
+  const [inviteCode] = useState<string>(() => currentPlan?.inviteCode || `EXP-${String(toLocation || 'TRIP').slice(0, 3).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`);
   const [isAddMembersModalOpen, setIsAddMembersModalOpen] = useState(false);
 
   // Clean, fresh member initialization: Only the real authenticated user starts as Leader. Zero fake members!
@@ -169,7 +192,7 @@ const PlansPageInternal: React.FC<PlansPageProps> = ({
       setToLocation(initialDestination);
       setPreferredDestination(initialDestination);
       setFinalDestination(initialDestination);
-      if (!currentPlan || !currentPlan.toLocation.toLowerCase().includes(initialDestination.toLowerCase())) {
+      if (!currentPlan || !String(currentPlan.toLocation || '').toLowerCase().includes(initialDestination.toLowerCase())) {
         setCurrentStep(1);
       }
     }
@@ -178,23 +201,23 @@ const PlansPageInternal: React.FC<PlansPageProps> = ({
   // If currentPlan changes externally (e.g. selected from Saves)
   useEffect(() => {
     if (currentPlan) {
-      setFromLocation(currentPlan.fromLocation);
-      setToLocation(currentPlan.toLocation);
-      setPreferredDestination(currentPlan.preferredDestination || currentPlan.toLocation);
-      setFinalDestination(currentPlan.finalDestination || currentPlan.toLocation);
+      setFromLocation(currentPlan.fromLocation || '');
+      setToLocation(currentPlan.toLocation || '');
+      setPreferredDestination(currentPlan.preferredDestination || currentPlan.toLocation || '');
+      setFinalDestination(currentPlan.finalDestination || currentPlan.toLocation || '');
       if (currentPlan.dailyStartTime) setDailyStartTime(currentPlan.dailyStartTime);
-      if (currentPlan.members) setMembers(currentPlan.members);
+      if (Array.isArray(currentPlan.members) && currentPlan.members.length > 0) setMembers(currentPlan.members);
       if (currentPlan.groupDNA) setGroupDNA(currentPlan.groupDNA);
-      setFriendsCount(currentPlan.friendsCount);
-      setBudget(currentPlan.budget);
-      setTransportMode(currentPlan.transportMode);
+      if (currentPlan.friendsCount) setFriendsCount(currentPlan.friendsCount);
+      if (currentPlan.budget) setBudget(currentPlan.budget);
+      if (currentPlan.transportMode) setTransportMode(currentPlan.transportMode);
       if (currentPlan.startDate) {
         setSelectedDate(currentPlan.startDate);
       }
       if (currentPlan.durationDays) {
         setDurationDays(currentPlan.durationDays);
       }
-      if (currentPlan.preferredActivities) {
+      if (Array.isArray(currentPlan.preferredActivities)) {
         setSelectedActivities(currentPlan.preferredActivities);
       }
       if (currentPlan.moodMeter) {
@@ -249,7 +272,7 @@ const PlansPageInternal: React.FC<PlansPageProps> = ({
   // Live exhaustion projection
   const targetForDist = finalDestination || toLocation || 'Goa';
   const liveDistanceKm = estimateDistanceKm(fromLocation || 'New Delhi', targetForDist);
-  const liveExhaustionProjection = calculateExhaustion(liveDistanceKm, transportMode, selectedActivities, groupDNA || moodMeter);
+  const liveExhaustionProjection = calculateExhaustion(liveDistanceKm, transportMode || 'flight', selectedActivities || [], groupDNA || moodMeter);
 
   // Handler to Add a Buffer Day in Final Itinerary
   const handleAddBufferDay = () => {
@@ -735,7 +758,7 @@ const PlansPageInternal: React.FC<PlansPageProps> = ({
       <AddMembersModal
         isOpen={isAddMembersModalOpen}
         onClose={() => setIsAddMembersModalOpen(false)}
-        tripName={`${(finalDestination || toLocation).toUpperCase()} EXPEDITION`}
+        tripName={`${String(finalDestination || toLocation || 'TRIP').toUpperCase()} EXPEDITION`}
         inviteCode={inviteCode}
         members={members}
         onAddMember={handleAddMember}
@@ -751,7 +774,7 @@ const PlansPageInternal: React.FC<PlansPageProps> = ({
 };
 
 export const PlansPage: React.FC<PlansPageProps> = (props) => (
-  <PlansPageErrorBoundary>
+  <PlansPageErrorBoundary onReset={props.onReset}>
     <PlansPageInternal {...props} />
   </PlansPageErrorBoundary>
 );
