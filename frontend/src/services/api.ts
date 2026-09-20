@@ -2,6 +2,8 @@
  * TRIP//OS — Frontend API Integration Service
  * Connects frontend directly with the production Node/Express + PostgreSQL + Supabase backend.
  */
+import { ALL_49_INDIAN_DESTINATIONS } from '../data/all49Destinations';
+import { FriendUser, FriendRequestItem } from '../types';
 
 function getApiBaseUrl(): string {
   let base = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL)
@@ -468,6 +470,81 @@ export async function getRecommendationsApi(tripId: string | number) {
   }
 }
 
+// 9B. Friends System APIs (Requirement: Sidebar Friends feature with direct trip invite)
+export async function fetchFriendsApi(): Promise<{ friends: FriendUser[]; incomingRequests: FriendRequestItem[]; outgoingRequests: FriendRequestItem[] }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/friends`, {
+      headers: DEFAULT_AUTH_HEADER
+    });
+    if (!res.ok) throw new Error('Failed to fetch friends');
+    return await res.json();
+  } catch (err) {
+    console.warn('[TRIP//OS API] Fetch friends fallback:', err);
+    return { friends: [], incomingRequests: [], outgoingRequests: [] };
+  }
+}
+
+export async function sendFriendRequestApi(email: string, name?: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/friends/request`, {
+      method: 'POST',
+      headers: DEFAULT_AUTH_HEADER,
+      body: JSON.stringify({ email, name })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to send friend request');
+    return data;
+  } catch (err: any) {
+    console.warn('[TRIP//OS API] Send friend request notice:', err);
+    throw err;
+  }
+}
+
+export async function respondFriendRequestApi(requestId: number, action: 'ACCEPT' | 'REJECT') {
+  try {
+    const res = await fetch(`${API_BASE_URL}/friends/requests/${requestId}/respond`, {
+      method: 'PATCH',
+      headers: DEFAULT_AUTH_HEADER,
+      body: JSON.stringify({ action })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to respond to request');
+    return data;
+  } catch (err: any) {
+    console.warn('[TRIP//OS API] Respond friend request notice:', err);
+    throw err;
+  }
+}
+
+export async function inviteFriendToTripApi(tripId: string | number, friendId?: string, friendEmail?: string, friendName?: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/friends/invite-trip`, {
+      method: 'POST',
+      headers: DEFAULT_AUTH_HEADER,
+      body: JSON.stringify({ tripId, friendId, friendEmail, friendName })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to invite friend to trip');
+    return data;
+  } catch (err: any) {
+    console.warn('[TRIP//OS API] Invite friend to trip notice:', err);
+    throw err;
+  }
+}
+
+export async function removeFriendApi(friendId: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/friends/${friendId}`, {
+      method: 'DELETE',
+      headers: DEFAULT_AUTH_HEADER
+    });
+    return await res.json();
+  } catch (err) {
+    console.warn('[TRIP//OS API] Remove friend notice:', err);
+    return { success: true };
+  }
+}
+
 // 10. In-Memory GroupDNA Calculation Engine (Exact match with backend scoringEngine.js)
 export function calculateLocalGroupDNA(preferencesList: any[]): any {
   if (!preferencesList || preferencesList.length === 0) {
@@ -516,128 +593,8 @@ export function calculateLocalGroupDNA(preferencesList: any[]): any {
   };
 }
 
-export const CURATED_INDIAN_DESTINATIONS = [
-  {
-    id: 'goa',
-    name: 'Goa Coastline',
-    state: 'Goa',
-    nature_score: 85,
-    adventure_score: 80,
-    food_score: 92,
-    photography_score: 88,
-    nightlife_score: 95,
-    relaxation_score: 86,
-    budget_score: 65,
-    walking_requirement: 45,
-    crowd_level: 75,
-    description: 'Sun-kissed Arabian Sea beaches, Portuguese colonial quarters, vibrant beach clubs, seafood thalis, and coastal water sports.'
-  },
-  {
-    id: 'manali',
-    name: 'Manali & Solang Valley',
-    state: 'Himachal Pradesh',
-    nature_score: 95,
-    adventure_score: 90,
-    food_score: 72,
-    photography_score: 96,
-    nightlife_score: 55,
-    relaxation_score: 78,
-    budget_score: 70,
-    walking_requirement: 80,
-    crowd_level: 68,
-    description: 'Towering pine forests, snow-clad mountain passes, Solang adventure paragliding, river crossings, and bohemian cafes.'
-  },
-  {
-    id: 'jaipur',
-    name: 'Jaipur Royal City',
-    state: 'Rajasthan',
-    nature_score: 55,
-    adventure_score: 60,
-    food_score: 95,
-    photography_score: 94,
-    nightlife_score: 65,
-    relaxation_score: 75,
-    budget_score: 80,
-    walking_requirement: 65,
-    crowd_level: 82,
-    description: 'Grand palaces, Nahargarh sunset terraces, authentic Rajasthani Dal Baati, artisan gem bazaars, and opulent royal forts.'
-  },
-  {
-    id: 'munnar',
-    name: 'Munnar Tea Hills',
-    state: 'Kerala',
-    nature_score: 98,
-    adventure_score: 68,
-    food_score: 82,
-    photography_score: 95,
-    nightlife_score: 25,
-    relaxation_score: 94,
-    budget_score: 75,
-    walking_requirement: 60,
-    crowd_level: 42,
-    description: 'Emerald carpeted tea plantations, misty mountain peaks, spice gardens, Ayurvedic serenity, and tranquil treehouse retreats.'
-  },
-  {
-    id: 'varanasi',
-    name: 'Varanasi Ancient Ghats',
-    state: 'Uttar Pradesh',
-    nature_score: 65,
-    adventure_score: 50,
-    food_score: 90,
-    photography_score: 98,
-    nightlife_score: 30,
-    relaxation_score: 80,
-    budget_score: 92,
-    walking_requirement: 75,
-    crowd_level: 90,
-    description: 'Spiritual heart of India, mesmerizing evening Ganga Aarti, sunrise boat journeys, ancient silk alleyways, and street food mastery.'
-  },
-  {
-    id: 'rishikesh',
-    name: 'Rishikesh Yoga & Rafting',
-    state: 'Uttarakhand',
-    nature_score: 92,
-    adventure_score: 88,
-    food_score: 78,
-    photography_score: 88,
-    nightlife_score: 45,
-    relaxation_score: 85,
-    budget_score: 82,
-    walking_requirement: 70,
-    crowd_level: 60,
-    description: 'White-water river rafting on the Ganges, cliff jumping, cliffside yoga retreats, Beatles ashram, and organic riverside cafes.'
-  },
-  {
-    id: 'udaipur',
-    name: 'Udaipur City of Lakes',
-    state: 'Rajasthan',
-    nature_score: 78,
-    adventure_score: 55,
-    food_score: 88,
-    photography_score: 95,
-    nightlife_score: 60,
-    relaxation_score: 92,
-    budget_score: 68,
-    walking_requirement: 55,
-    crowd_level: 65,
-    description: 'Floating marble palaces on Lake Pichola, romantic sunset boat cruises, heritage havelis, and tranquil courtyard cafes.'
-  },
-  {
-    id: 'leh',
-    name: 'Leh Ladakh High Passes',
-    state: 'Ladakh',
-    nature_score: 99,
-    adventure_score: 98,
-    food_score: 65,
-    photography_score: 99,
-    nightlife_score: 20,
-    relaxation_score: 70,
-    budget_score: 55,
-    walking_requirement: 88,
-    crowd_level: 35,
-    description: 'World-highest motorable mountain passes, cobalt blue Pangong Tso, Buddhist monasteries, stargazing, and raw Himalayan thrills.'
-  }
-];
+// All 49 Curated Indian Tourist Destinations with dimensional scores
+export const CURATED_INDIAN_DESTINATIONS = ALL_49_INDIAN_DESTINATIONS;
 
 export function rankDestinationsWithDNA(dna: any, preferredDestName: string = ''): any[] {
   const weights = {

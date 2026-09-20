@@ -600,26 +600,52 @@ export const PlansPage: React.FC<PlansPageProps> = ({
         )}
 
         {/* PAGE 6: FINAL ITINERARY */}
-        {currentStep === 6 && currentPlan && (
-          <FinalItineraryView
-            key="final-itinerary"
-            plan={currentPlan}
-            onSavePlan={onSavePlan}
-            onModifySteps={() => setCurrentStep(1)}
-            onNewPlan={() => {
-              setFromLocation('New Delhi');
-              setToLocation('Goa Coastline');
-              setPreferredDestination('Goa Coastline');
-              setFinalDestination('Goa Coastline');
-              setFriendsCount(3);
-              setBudget(45000);
-              setCurrentStep(1);
-            }}
-            onAddBufferDay={handleAddBufferDay}
-            onChangePlanDay={handleChangePlanDay}
-            onOptimizeForRelaxation={handleOptimizeForRelaxation}
-            hasBufferDayAdded={hasBufferDayAdded}
-          />
+        {currentStep === 6 && (
+          currentPlan ? (
+            <FinalItineraryView
+              key="final-itinerary"
+              plan={currentPlan}
+              onSavePlan={onSavePlan}
+              onModifySteps={() => setCurrentStep(1)}
+              onNewPlan={() => {
+                setFromLocation('');
+                setToLocation('');
+                setPreferredDestination('');
+                setFinalDestination('');
+                setFriendsCount(1);
+                setBudget(25000);
+                setCurrentStep(1);
+              }}
+              onAddBufferDay={handleAddBufferDay}
+              onChangePlanDay={handleChangePlanDay}
+              onOptimizeForRelaxation={handleOptimizeForRelaxation}
+              hasBufferDayAdded={hasBufferDayAdded}
+            />
+          ) : (
+            <motion.div
+              key="no-plan-fallback"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="glass-card p-12 text-center rounded-3xl border border-white/90 shadow-xl space-y-4"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center mx-auto">
+                <Compass className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-black uppercase text-slate-900">
+                NO ITINERARY SYNTHESIZED YET
+              </h3>
+              <p className="text-xs font-mono text-slate-600 max-w-md mx-auto">
+                Configure your origin, date, party, 9 vibe preferences, and approve your destination to synthesize a custom itinerary.
+              </p>
+              <button
+                type="button"
+                onClick={() => setCurrentStep(1)}
+                className="px-6 py-3 rounded-2xl bg-neutral-950 hover:bg-black text-white text-xs font-mono font-black uppercase tracking-wider shadow-lg transition-all cursor-pointer"
+              >
+                START WITH STEP 01 (ROUTE) →
+              </button>
+            </motion.div>
+          )
         )}
       </AnimatePresence>
 

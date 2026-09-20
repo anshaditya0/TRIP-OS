@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, UserPlus, Copy, Check, Share2, QrCode, 
   ShieldCheck, Clock, X, Sparkles, AlertCircle, UserCheck, Trash2
 } from 'lucide-react';
-import { TripMember } from '../../types';
+import { TripMember, FriendUser } from '../../types';
+import { fetchFriendsApi } from '../../services/api';
 
 interface AddMembersModalProps {
   isOpen: boolean;
@@ -34,6 +35,17 @@ export const AddMembersModal: React.FC<AddMembersModalProps> = ({
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [showQr, setShowQr] = useState(false);
+  const [friends, setFriends] = useState<FriendUser[]>([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchFriendsApi().then(data => {
+        if (data && Array.isArray(data.friends)) {
+          setFriends(data.friends);
+        }
+      }).catch(() => {});
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -211,6 +223,37 @@ export const AddMembersModal: React.FC<AddMembersModalProps> = ({
                 + ADD MEMBER TO TRIP ROSTER
               </button>
             </form>
+
+            {/* Quick Add from Friends List */}
+            {friends.length > 0 && (
+              <div className="p-3.5 rounded-2xl bg-orange-50/70 border border-orange-200/80 space-y-2">
+                <span className="text-[10px] font-mono font-black uppercase tracking-wider text-orange-900 flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-orange-600" />
+                  OR ADD FROM YOUR CONNECTED FRIENDS:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {friends.map((f) => {
+                    const alreadyInTrip = members.some(m => m.email?.toLowerCase() === f.email.toLowerCase() || m.name.toLowerCase() === f.name.toLowerCase());
+                    return (
+                      <button
+                        key={f.friend_id}
+                        type="button"
+                        disabled={alreadyInTrip}
+                        onClick={() => onAddMember(f.name, f.email)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                          alreadyInTrip
+                            ? 'bg-slate-200 text-slate-500 cursor-not-allowed opacity-60'
+                            : 'bg-white hover:bg-orange-500 hover:text-white text-slate-800 border border-orange-200 shadow-2xs'
+                        }`}
+                      >
+                        <span>{f.name}</span>
+                        {alreadyInTrip ? <Check className="w-3 h-3 text-emerald-600" /> : <Plus className="w-3 h-3 text-orange-500" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Members Roster */}
             <div className="space-y-3">

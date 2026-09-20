@@ -33,8 +33,9 @@ import { DisasterAlertsFeed } from './components/DisasterAlertsFeed';
 import { OpeningSplash } from './components/OpeningSplash';
 import { MultilingualGreeting } from './components/MultilingualGreeting';
 import { NotificationsModal } from './components/NotificationsModal';
+import { FriendsPage } from './components/FriendsPage';
 import { AppNotification } from './types';
-import { removeStoredToken, createTripApi, fetchUserTripsApi, savePreferencesApi } from './services/api';
+import { removeStoredToken, createTripApi, fetchUserTripsApi, savePreferencesApi, fetchFriendsApi } from './services/api';
 
 const PAGE_HEADER_CONFIGS: Record<NavTab, { title: string; subtitle: string }> = {
   home: {
@@ -48,6 +49,10 @@ const PAGE_HEADER_CONFIGS: Record<NavTab, { title: string; subtitle: string }> =
   saves: {
     title: 'SAVED EXPEDITIONS VAULT',
     subtitle: 'BOOKMARKED JOURNEYS • OFFLINE EXPEDITION DOSSIERS',
+  },
+  friends: {
+    title: 'SQUAD & FRIENDS ROSTER',
+    subtitle: 'EXPEDITION COMPANIONS • DIRECT INVITATION NETWORK',
   },
   profile: {
     title: 'EXPLORER IDENTITY & VAULT',
@@ -202,6 +207,17 @@ export default function App() {
   // Requirement 1 & 3: Mission telemetry notifications state - fresh and clean
   const [isNotificationsOpen, setIsNotificationsOpen] = useState<boolean>(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [pendingFriendsCount, setPendingFriendsCount] = useState<number>(0);
+
+  // Sync pending friend requests
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    fetchFriendsApi().then((data) => {
+      if (data && Array.isArray(data.incomingRequests)) {
+        setPendingFriendsCount(data.incomingRequests.length);
+      }
+    }).catch(() => {});
+  }, [isAuthenticated]);
 
   const handleStartNewPlan = () => {
     setPlannerDestination('');
@@ -400,6 +416,7 @@ export default function App() {
           user={user}
           savedCount={savedPlans.length}
           unreadNotificationsCount={notifications.filter(n => !n.read).length}
+          pendingFriendsCount={pendingFriendsCount}
           onOpenNotifications={() => setIsNotificationsOpen(true)}
         />
 
@@ -688,6 +705,39 @@ export default function App() {
                     setCurrentTab('plans');
                   }}
                   onDeletePlan={handleDeleteSavedPlan}
+                />
+              </motion.div>
+            )}
+
+            {currentTab === 'friends' && (
+              <motion.div
+                key="tab-friends"
+                initial={{ opacity: 0, y: 15, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -15, scale: 0.98 }}
+                transition={{ type: 'spring', damping: 24, stiffness: 260 }}
+              >
+                <FriendsPage
+                  user={user}
+                  savedPlans={savedPlans}
+                  onSelectTripToPlan={(plan) => {
+                    setCurrentPlan(plan);
+                    setWeatherTheme(plan.weatherType);
+                    setCurrentTab('plans');
+                  }}
+                  onFriendInviteSent={(tripId, friendName) => {
+                    setNotifications(prev => [
+                      {
+                        id: `notif-${Date.now()}`,
+                        type: 'JOIN_REQUEST',
+                        title: 'FRIEND INVITED TO EXPEDITION',
+                        message: `Directly approved & added ${friendName} to expedition squad.`,
+                        timestamp: 'Just now',
+                        read: false
+                      },
+                      ...prev
+                    ]);
+                  }}
                 />
               </motion.div>
             )}

@@ -1,10 +1,10 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Home, Compass, Bookmark, User, MapPin, Sparkles, Navigation, Bell } from 'lucide-react';
+import { Home, Compass, Bookmark, User, MapPin, Sparkles, Navigation, Bell, Users } from 'lucide-react';
 import { UserProfile } from '../types';
 import { TiltCard } from './TiltCard';
 
-export type NavTab = 'home' | 'plans' | 'saves' | 'profile';
+export type NavTab = 'home' | 'plans' | 'saves' | 'friends' | 'profile';
 
 interface LiquidNavbarProps {
   currentTab: NavTab;
@@ -12,6 +12,7 @@ interface LiquidNavbarProps {
   user: UserProfile;
   savedCount: number;
   unreadNotificationsCount?: number;
+  pendingFriendsCount?: number;
   onOpenNotifications?: () => void;
 }
 
@@ -20,13 +21,15 @@ export const LiquidNavbar: React.FC<LiquidNavbarProps> = ({
   onSelectTab,
   user,
   savedCount,
-  unreadNotificationsCount = 3,
+  unreadNotificationsCount = 0,
+  pendingFriendsCount = 0,
   onOpenNotifications,
 }) => {
   const tabs = [
     { id: 'home' as NavTab, label: 'HOME', icon: Home, badge: null },
     { id: 'plans' as NavTab, label: 'PLANS', icon: Compass, badge: 'PLANNER' },
     { id: 'saves' as NavTab, label: 'SAVES', icon: Bookmark, badge: savedCount > 0 ? `${savedCount}` : null },
+    { id: 'friends' as NavTab, label: 'FRIENDS', icon: Users, badge: pendingFriendsCount > 0 ? `${pendingFriendsCount} NEW` : null },
     { id: 'profile' as NavTab, label: user.name.split(' ')[0] || 'PROFILE', icon: User, badge: null },
   ];
 

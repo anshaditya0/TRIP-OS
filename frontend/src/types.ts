@@ -314,3 +314,27 @@ export interface UserProfile {
   collectibles?: JourneyCollectible[];
 }
 
+export interface FriendUser {
+  friendship_id?: number;
+  friend_id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  homeCity?: string;
+  tripsCount?: number;
+  created_at?: string;
+}
+
+export interface FriendRequestItem {
+  id: number;
+  sender_id?: string;
+  receiver_id?: string;
+  sender_name?: string;
+  sender_email?: string;
+  receiver_name?: string;
+  receiver_email?: string;
+  created_at: string;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+}
+
+

@@ -1237,12 +1237,24 @@ Generated via Yatra Trip Itinerary Planner
         dayNumber={selectedDayNumber}
         venueIndex={selectedVenueIndex}
         daySchedule={currentSchedule}
-        destination={plan.toLocation}
+        destination={safeTo}
+        totalDays={safeDayPlans.length}
         onApplyScheduleShift={(newSched) => {
           setCustomSchedules(prev => ({
             ...prev,
             [selectedDayNumber]: newSched
           }));
+        }}
+        onMoveVenueToDay={(fromDay, toDay, movedActivity) => {
+          setCustomSchedules(prev => {
+            const currentFrom = prev[fromDay] || safeDayPlans.find(d => d.dayNumber === fromDay)?.schedule || [];
+            const currentTo = prev[toDay] || safeDayPlans.find(d => d.dayNumber === toDay)?.schedule || [];
+            return {
+              ...prev,
+              [fromDay]: currentFrom.filter((_, idx) => idx !== selectedVenueIndex),
+              [toDay]: [...currentTo, movedActivity]
+            };
+          });
         }}
       />
     </motion.div>
